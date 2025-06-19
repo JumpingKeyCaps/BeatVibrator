@@ -113,7 +113,69 @@
   > 🔧 In short: ERM for basic cheap buzz, LRA for accurate effects — but with hardware constraints.
 
   ---
-
+  
+ ## Project Structure
+ ```
+beatvibrator/
+│
+├── di/
+│   └── AppModule.kt                       # Provides repos, services, ViewModels (Hilt)
+│
+├── data/
+│   ├── repository/                        # Data source access
+│   │   ├── AudioImportRepository.kt        # SAF + URI handling
+│   │   ├── AudioAnalyzerRepository.kt      # PCM → RMS, FFT, Onsets
+│   │   ├── AudioPlayerRepository.kt        # ExoPlayer control
+│   │   └── HapticPlaybackRepository.kt     # VibratorManager, playback sync
+│   │
+│   └── service/                           # System access or long-lived components
+│       ├── AudioProcessorService.kt        # Extract PCM from ExoPlayer
+│       ├── VibrationService.kt             # API 31+ vibration helper
+│       └── FileAccessService.kt            # SAF loader helper
+│
+├── domain/
+│   ├── model/                              # Business models moved here
+│   │   ├── HapticEvent.kt
+│   │   ├── VibrationPattern.kt
+│   │   └── AudioMetadata.kt
+│   │
+│   ├── mapper/                             # DSP → haptics mapping
+│   │   └── HapticPatternMapper.kt
+│   │
+│   ├── dsp/                                # Pure DSP utilities
+│   │   ├── FFT.kt
+│   │   ├── ButterworthFilter.kt
+│   │   ├── RmsCalculator.kt
+│   │   └── OnsetDetector.kt
+│   │
+│   └── util/
+│       └── TimeUtils.kt                    # Latency correction, duration helpers
+│
+├── ui/
+│   ├── main/                               # Single screen, 100% Compose
+│   │   ├── MainScreen.kt                    # Compose root (feature decomposition)
+│   │   └── MainUiState.kt                  # Shared state if needed
+│   │
+│   ├── import/                             # File selection & management
+│   │   └── AudioImportViewModel.kt
+│   │
+│   ├── analyzer/                           # Audio analysis
+│   │   └── AnalyzerViewModel.kt
+│   │
+│   ├── player/                             # Playback controls
+│   │   └── PlayerViewModel.kt
+│   │
+│   ├── haptics/                            # Pattern playback
+│   │   └── HapticsViewModel.kt
+│   │
+│   └── visualizer/                         # Fractal visualization
+│       └── VisualizerViewModel.kt
+│
+├── MainActivity.kt                         # Host Compose UI
+└── BeatVibratorApp.kt                      # HiltApp + theme setup
+ ```
+ ---
+  
   ## 🧠 Motivation & Vision
 
   BeatVibrator is a personal research project exploring:
@@ -128,3 +190,5 @@
   ## 💡 Original Idea
 
   A personal research project to explore **tactile musicality**, the haptic limits of Android devices, and the bridges between sound & vibration.
+
+  ---
