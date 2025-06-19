@@ -134,7 +134,7 @@ beatvibrator/
 │       └── FileAccessService.kt            # SAF loader helper
 │
 ├── domain/
-│   ├── model/                              # Business models moved here
+│   ├── model/                              # Business models 
 │   │   ├── HapticEvent.kt
 │   │   ├── VibrationPattern.kt
 │   │   └── AudioMetadata.kt
@@ -154,7 +154,7 @@ beatvibrator/
 ├── ui/
 │   ├── main/                               # Single screen, 100% Compose
 │   │   ├── MainScreen.kt                    # Compose root (feature decomposition)
-│   │   └── MainUiState.kt                  # Shared state if needed
+│   │   └── MainUiState.kt                  # Shared state 
 │   │
 │   ├── import/                             # File selection & management
 │   │   └── AudioImportViewModel.kt
@@ -172,7 +172,7 @@ beatvibrator/
 │       └── VisualizerViewModel.kt
 │
 ├── MainActivity.kt                         # Host Compose UI
-└── BeatVibratorApp.kt                      # HiltApp + theme setup
+└── BeatVibratorApp.kt                      # HiltApp + setup
  ```
  ---
   
