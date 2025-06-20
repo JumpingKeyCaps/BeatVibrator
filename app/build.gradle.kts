@@ -56,11 +56,12 @@ dependencies {
     implementation ("androidx.compose.foundation:foundation:1.8.2")
     implementation ("androidx.compose.ui:ui:1.8.2")
 
-    //Di - Hilt ----
+    //Di - Hilt ---
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
-
+    //ExoPlayer ---
+    implementation(libs.androidx.media3.exoplayer)
     //Test Stuff ---
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
