@@ -1,8 +1,10 @@
  # 🎵 BeatVibrator
 
-  [![Platform](https://img.shields.io/badge/platform-Android-blue)](#)
-  [![Compose](https://img.shields.io/badge/Jetpack_Compose-enabled-orange)](#)
+  ![Status](https://img.shields.io/badge/status-WIP-red)
+  [![Platform](https://img.shields.io/badge/platform-Android-green)](#)
+  ![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-✔️-blue)
   [![Haptics](https://img.shields.io/badge/Haptics-LRA_Advanced-important)](#)
+
 
   **BeatVibrator** is an experimental Android app that transforms an MP3 file into a **synchronized tactile experience**. It analyzes the audio signal, extracts coherent haptic patterns (low frequencies, transients, energy), and uses the **VibratorManager** to trigger vibrations precisely in sync with the music.
 
