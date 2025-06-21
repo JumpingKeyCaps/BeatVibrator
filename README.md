@@ -1,8 +1,9 @@
  # 🎵 BeatVibrator
 
   ![Status](https://img.shields.io/badge/status-WIP-red)
-  [![Platform](https://img.shields.io/badge/platform-Android-green)](#)
-  ![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-✔️-blue)
+  ![Kotlin](https://img.shields.io/badge/Kotlin-7F52FF?logo=kotlin&logoColor=white)
+![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-4285F4?logo=android&logoColor=white)
+![Android Studio](https://img.shields.io/badge/Android%20Studio-3DDC84?logo=androidstudio&logoColor=white)
   [![Haptics](https://img.shields.io/badge/Haptics-LRA_Advanced-important)](#)
 
 
