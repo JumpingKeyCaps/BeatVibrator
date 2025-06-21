@@ -42,34 +42,42 @@
 
   ---
 
-  ## 📐 Pipeline: MP3 → Haptic Pattern (precomputed)
+ ## 📐 Pipeline: MP3 → Haptic Pattern (precomputed)
 
-  A step-by-step breakdown of the signal processing path:
+A step-by-step breakdown of the signal processing path:
 
-  1. **Audio loading** using `ExoPlayer` with a custom `AudioProcessor`  
-     → Raw 16-bit PCM audio extraction (mono/stereo)
+1. **Audio decoding** using `MediaCodec` (offline)  
+   → Direct MP3 → PCM (16-bit signed, mono/stereo) without playback  
+   *(Used only for analysis and vibration generation, not audio output)*
 
-  2. **DSP pre-processing**:
-     - Short → Float conversion [-1.0f, +1.0f]
-     - Optional stereo averaging
-     - 2nd order Butterworth low-pass filter (100–250 Hz)
-     - RMS over 10–30ms windows
-     - Onset detection (RMS delta > dynamic threshold)
+2. **DSP processing**:
+   - Short → Float conversion [-1.0f, +1.0f]
+   - Optional stereo averaging
+   - 2nd order Butterworth low-pass filter (100–250 Hz)
+   - RMS over 10–30ms windows
+   - Onset detection (RMS delta > dynamic threshold)
 
-  3. **Haptic mapping**:
-     - Normalized RMS → amplitude (0–255) using exponential mapping
-     - Minimum threshold to skip weak vibrations
-     - Additional strong impulses on detected onsets
+3. **Post-processing refinement**:
+   - Normalize RMS → amplitude (0–255) using exponential mapping
+   - Skip low-amplitude segments (threshold gating)
+   - Inject stronger impulses on detected onsets
+   - Remove ultra-short or weak pulses
+   - Merge clustered onsets within a short window
+   - Compress amplitudes (soft perceptual scaling)
+   - Dynamically adjust pulse duration based on energy
+   - Optional beat quantization (snap to BPM grid)
+   - Clamp & sort final timeline
 
-  4. **Pattern generation**:
-     - List of `HapticEvent(timestampMs, durationMs, amplitude)`
-     - Merge consecutive similar segments for optimization
-     - In-memory storage for synchronized playback
+4. **Pattern generation**:
+   - Build list of `HapticEvent(timestampMs, durationMs, amplitude)`
+   - Merge consecutive similar segments for optimization
+   - In-memory storage for synchronized playback
 
-  5. **Synchronized playback**:
-     - Dedicated coroutine for triggering vibrations during playback
-     - Latency compensation (LRA offset ~20–50ms)
-     - Sequential calls to `VibrationEffect` in real-time
+5. **Synchronized playback**:
+   - **Audio playback** using `ExoPlayer`
+   - Dedicated coroutine for triggering vibrations during playback
+   - Latency compensation (LRA offset ~20–50ms)
+   - Sequential calls to `VibrationEffect` in real-time
 
   ---
 
@@ -88,7 +96,7 @@
   - [ ] MP3 import (SAF)
   - [ ] PCM extraction via AudioProcessor
   - [ ] RMS + low-pass filter on PCM buffer
-  - [ ] Precompute `HapticEvents`
+  - [ ] Post-processing (amplitude mapping, cleanup, quantization)
   - [ ] Dynamic visualization driven by RMS/onsets
   - [ ] Immersive UI (fullscreen, pink/red gradient)
   - [ ] Playback ↔ vibration synchronization with latency offset
