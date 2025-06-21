@@ -1,6 +1,6 @@
 
  <p align="center">
-  <img src="screenshots/logoappclear.png" alt="Logo" width="477" height="333">
+  <img src="screenshots/logoappclear.png" alt="Logo" width="400" height="400">
 </p>
  
  # BeatVibrator
