@@ -1,4 +1,9 @@
- # 🎵 BeatVibrator
+
+ <p align="center">
+  <img src="screenshots/logoappclear.png" alt="Logo" width="477" height="333">
+</p>
+ 
+ # BeatVibrator
 
   ![Status](https://img.shields.io/badge/status-WIP-red)
   ![Kotlin](https://img.shields.io/badge/Kotlin-7F52FF?logo=kotlin&logoColor=white)
