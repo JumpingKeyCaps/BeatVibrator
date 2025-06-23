@@ -94,49 +94,49 @@ A step-by-step breakdown of the signal processing path:
   
  ### Signal Processing Pipeline
  ```
-                                           +---------------------------------------------+
-                                           | 1. MP3 Selection via SAF                    |
-                                           +--------------------+------------------------+
-                                                                |
-                                                                v
-                                           +---------------------------------------------+
-                                           | 2. MP3 Decoding → PCM                       |
-                                           |    - MediaExtractor + MediaCodec            |
-                                           |    - PCM Buffer (FloatArray)                |
-                                           +--------------------+------------------------+
-                                                                |
-                                                                v
-                                           +---------------------------------------------+
-                                           | 3. Full DSP Analysis                        |
-                                           |                                             |
-                                           |  3.1. Butterworth Low-pass Filter (200Hz)   |
-                                           |  3.2. RMS Calculation (sliding windows,...) |
-                                           |  3.3. BPM Detection (on RMS signal)         |
-                                           |  3.4. FFT Spectrogram (FFT size, hop)       |
-                                           |  3.5. Onset Detection (peak picking, ...)   |
-                                           +--------------------+------------------------+
-                                                                |
-                                                                v
-                                           +---------------------------------------------+
-                                           | 4. Postprocessing                           |
-                                           |    - Cleaning / Compression                 |
-                                           |    - Non-linear Mapping                     |
-                                           |    - Framing synced to BPM                  |
-                                           |    - Intensity/duration adjustment          |
-                                           +--------------------+------------------------+
-                                                                |
-                                                                v
-                                           +---------------------------------------------+
-                                           | 5. Haptic Pattern Generation                |
-                                           |    - Precise timing (vibrations)            |
-                                           |    - Intensities and durations              |
-                                           +--------------------+------------------------+
-                                                                |
-                                                                v
-                                           +---------------------------------------------+
-                                           | 6. READY State & Playback Ready             |
-                                           |    - UI / Vibrations enabled                |
-                                           +---------------------------------------------+
+      +---------------------------------------------+
+      | 1. MP3 Selection via SAF                    |
+      +--------------------+------------------------+
+                           |
+                           v
+      +---------------------------------------------+
+      | 2. MP3 Decoding → PCM                       |
+      |    - MediaExtractor + MediaCodec            |
+      |    - PCM Buffer (FloatArray)                |
+      +--------------------+------------------------+
+                           |
+                           v
+      +---------------------------------------------+
+      | 3. Full DSP Analysis                        |
+      |                                             |
+      |  3.1. Butterworth Low-pass Filter (200Hz)   |
+      |  3.2. RMS Calculation (sliding windows,...) |
+      |  3.3. BPM Detection (on RMS signal)         |
+      |  3.4. FFT Spectrogram (FFT size, hop)       |
+      |  3.5. Onset Detection (peak picking, ...)   |
+      +--------------------+------------------------+
+                           |
+                           v
+      +---------------------------------------------+
+      | 4. Postprocessing                           |
+      |    - Cleaning / Compression                 |
+      |    - Non-linear Mapping                     |
+      |    - Framing synced to BPM                  |
+      |    - Intensity/duration adjustment          |
+      +--------------------+------------------------+
+                           |
+                           v
+      +---------------------------------------------+
+      | 5. Haptic Pattern Generation                |
+      |    - Precise timing (vibrations)            |
+      |    - Intensities and durations              |
+      +--------------------+------------------------+
+                           |
+                           v
+      +---------------------------------------------+
+      | 6. READY State & Playback Ready             |
+      |    - UI / Vibrations enabled                |
+      +---------------------------------------------+
  ```
 
   ---
