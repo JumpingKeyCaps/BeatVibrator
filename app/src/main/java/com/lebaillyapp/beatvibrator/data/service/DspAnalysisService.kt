@@ -5,6 +5,7 @@ import com.lebaillyapp.beatvibrator.domain.dsp.ButterworthFilter
 import com.lebaillyapp.beatvibrator.domain.audioProcess.DecodingResult
 import com.lebaillyapp.beatvibrator.domain.dsp.AnalysisResult
 import com.lebaillyapp.beatvibrator.domain.dsp.AnalysisStats
+import com.lebaillyapp.beatvibrator.domain.dsp.BpmDetector
 import com.lebaillyapp.beatvibrator.domain.dsp.DspConfig
 import com.lebaillyapp.beatvibrator.domain.dsp.FFT
 import com.lebaillyapp.beatvibrator.domain.dsp.OnsetDetector
@@ -44,6 +45,7 @@ class DspAnalysisService @Inject constructor(
     private val rmsCalculator: RmsCalculator,
     private val onsetDetector: OnsetDetector,
     private val fft: FFT,
+    private val bpmDetector: BpmDetector,
     private val config: DspConfig = DspConfig()
 ) {
 
@@ -112,16 +114,22 @@ class DspAnalysisService @Inject constructor(
                     normalize = true
                 )
 
-                // === 3. SPECTROGRAMME FFT ===
-                _analysisState.value = AnalysisState.Processing("Analyse spectrale FFT", 0.6f)
+                // === 3. ESTIMATION BPM ===
+                // Calcul du sampleRate du signal RMS
+                val rmsSampleRateHz = decodingResult.sampleRate.toFloat() / config.rmsHopSize
+                _analysisState.value = AnalysisState.Processing("Détection BPM", 0.7f)
+                val detectedBpm = bpmDetector.estimateBpm(rmsValues, rmsSampleRateHz)
 
+
+                // === 4. SPECTROGRAMME FFT ===
+                _analysisState.value = AnalysisState.Processing("Analyse spectrale FFT", 0.6f)
                 val spectrogram = fft.computeSpectrogram(
                     samples = filteredSamples,
                     fftSize = config.fftSize,
                     hopSize = config.hopSize
                 )
 
-                // === 4. DÉTECTION D'ONSETS ===
+                // === 5. DÉTECTION D'ONSETS ===
                 _analysisState.value = AnalysisState.Processing("Détection onsets", 0.8f)
 
                 val onsets = onsetDetector.detectOnsets(
@@ -147,7 +155,8 @@ class DspAnalysisService @Inject constructor(
                     rmsTimeStamps = generateTimeStamps(rmsValues.size, config.rmsHopSize, sampleRate),
                     onsetTimeStamps = onsets.map { frameIndex ->
                         frameIndex * config.hopSize.toFloat() / sampleRate
-                    }
+                    },
+                    detectedBpm = detectedBpm
                 )
 
                 _analysisState.value = AnalysisState.Completed(result)
