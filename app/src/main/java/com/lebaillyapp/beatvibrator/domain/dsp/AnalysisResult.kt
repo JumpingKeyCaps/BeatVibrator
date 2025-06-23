@@ -15,6 +15,7 @@ data class AnalysisResult(
     val originalDuration: Float,
     val filteredSamples: FloatArray,        // Signal filtré pour debug
     val config: DspConfig,
+    val detectedBpm: Int?,
     val rmsTimeStamps: List<Float>,         // Timestamps RMS (secondes)
     val onsetTimeStamps: List<Float>        // Timestamps onsets (secondes)
 )
