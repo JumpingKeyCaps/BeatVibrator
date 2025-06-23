@@ -28,16 +28,27 @@
 
   ---
 
+   ## 🔄 User Flow
+
+  1. User taps the **FAB** to select an MP3 file.
+  2. Audio is analyzed in the background → generates a `VibrationPattern`.
+  3. User hits **Play**.
+  4. **Music plays**, while **LRA vibrations** are triggered in parallel.
+  5. The UI displays **metadata** and a **responsive visualization**.
+
+  ---
+
   ## ⚙️ Tech Stack
 
   | Technology             | Role                                                 |
   |------------------------|------------------------------------------------------|
   | Kotlin                 | Main language, clean MVVM architecture              |
   | Jetpack Compose        | Modern, reactive, immersive UI                      |
-  | ExoPlayer + AudioProcessor | PCM extraction + playback control                |
+  | MediaCodec + MediaExtractor | PCM extraction (offline)                        |
   | Custom DSP (FFT, RMS, IIR) | Time/frequency domain audio analysis            |
+  | Post-Processing        | Cleaning, BPM synch,...                             |
   | VibratorManager        | Fine-grained haptic pattern handling                |
-  | Coroutine Flow         | Async processing and playback-haptics sync         |
+  | Coroutine Flow         | Async processing and playback-haptics sync          |
   | Hilt (optional)        | Modular dependency injection                        |
 
   ---
@@ -80,33 +91,57 @@ A step-by-step breakdown of the signal processing path:
    - Sequential calls to `VibrationEffect` in real-time
 
   ---
-
-  ## 🔄 User Flow
-
-  1. User taps the **FAB** to select an MP3 file.
-  2. Audio is analyzed in the background → generates a `VibrationPattern`.
-  3. User hits **Play**.
-  4. **Music plays**, while **LRA vibrations** are triggered in parallel.
-  5. The UI displays **metadata** and a **responsive visualization**.
+  
+ ### Signal Processing Pipeline
+ ```
+                                           +---------------------------------------------+
+                                           | 1. MP3 Selection via SAF                    |
+                                           +--------------------+------------------------+
+                                                                |
+                                                                v
+                                           +---------------------------------------------+
+                                           | 2. MP3 Decoding → PCM                       |
+                                           |    - MediaExtractor + MediaCodec            |
+                                           |    - PCM Buffer (FloatArray)                |
+                                           +--------------------+------------------------+
+                                                                |
+                                                                v
+                                           +---------------------------------------------+
+                                           | 3. Full DSP Analysis                        |
+                                           |                                             |
+                                           |  3.1. Butterworth Low-pass Filter (200Hz)   |
+                                           |  3.2. RMS Calculation (sliding windows,...) |
+                                           |  3.3. BPM Detection (on RMS signal)         |
+                                           |  3.4. FFT Spectrogram (FFT size, hop)       |
+                                           |  3.5. Onset Detection (peak picking, ...)   |
+                                           +--------------------+------------------------+
+                                                                |
+                                                                v
+                                           +---------------------------------------------+
+                                           | 4. Postprocessing                           |
+                                           |    - Cleaning / Compression                 |
+                                           |    - Non-linear Mapping                     |
+                                           |    - Framing synced to BPM                  |
+                                           |    - Intensity/duration adjustment          |
+                                           +--------------------+------------------------+
+                                                                |
+                                                                v
+                                           +---------------------------------------------+
+                                           | 5. Haptic Pattern Generation                |
+                                           |    - Precise timing (vibrations)            |
+                                           |    - Intensities and durations              |
+                                           +--------------------+------------------------+
+                                                                |
+                                                                v
+                                           +---------------------------------------------+
+                                           | 6. READY State & Playback Ready             |
+                                           |    - UI / Vibrations enabled                |
+                                           +---------------------------------------------+
+ ```
 
   ---
 
-  ## 📅 Roadmap (MVP)
-
-  - [ ] MP3 import (SAF)
-  - [ ] PCM extraction via AudioProcessor
-  - [ ] RMS + low-pass filter on PCM buffer
-  - [ ] Post-processing (amplitude mapping, cleanup, quantization)
-  - [ ] Dynamic visualization driven by RMS/onsets
-  - [ ] Immersive UI (fullscreen, pink/red gradient)
-  - [ ] Playback ↔ vibration synchronization with latency offset
-  - [ ] Advanced `VibratorManager` integration (API ≥ S)
-  - [ ] Pattern display & editing (dev/debug mode)
-  - [ ] Settings: sensitivity, intensity, mapping type
-
-  ---
-
-  ## 🧪 Limitations & Device Requirements
+ ## 🧪 Limitations & Device Requirements
 
   - Works **only** on Android devices with a **high-quality LRA motor** (API 31+ recommended).
   - Supports **one MP3 file at a time** — no playlist or queue.
@@ -128,69 +163,23 @@ A step-by-step breakdown of the signal processing path:
 
   > 🔧 In short: ERM for basic cheap buzz, LRA for accurate effects — but with hardware constraints.
 
-  ---
-  
- ## Project Structure
- ```
-beatvibrator/
-│
-├── di/
-│   └── AppModule.kt                       # Provides repos, services, ViewModels (Hilt)
-│
-├── data/
-│   ├── repository/                        # Data source access
-│   │   ├── AudioImportRepository.kt        # SAF + URI handling
-│   │   ├── AudioAnalyzerRepository.kt      # PCM → RMS, FFT, Onsets
-│   │   ├── AudioPlayerRepository.kt        # ExoPlayer control
-│   │   └── HapticPlaybackRepository.kt     # VibratorManager, playback sync
-│   │
-│   └── service/                           # System access or long-lived components
-│       ├── AudioProcessorService.kt        # Extract PCM from ExoPlayer
-│       ├── VibrationService.kt             # API 31+ vibration helper
-│       └── FileAccessService.kt            # SAF loader helper
-│
-├── domain/
-│   ├── model/                              # Business models 
-│   │   ├── HapticEvent.kt
-│   │   ├── VibrationPattern.kt
-│   │   └── AudioMetadata.kt
-│   │
-│   ├── mapper/                             # DSP → haptics mapping
-│   │   └── HapticPatternMapper.kt
-│   │
-│   ├── dsp/                                # Pure DSP utilities
-│   │   ├── FFT.kt
-│   │   ├── ButterworthFilter.kt
-│   │   ├── RmsCalculator.kt
-│   │   └── OnsetDetector.kt
-│   │
-│   └── util/
-│       └── TimeUtils.kt                    # Latency correction, duration helpers
-│
-├── ui/
-│   ├── main/                               # Single screen, 100% Compose
-│   │   ├── MainScreen.kt                    # Compose root (feature decomposition)
-│   │   └── MainUiState.kt                  # Shared state 
-│   │
-│   ├── import/                             # File selection & management
-│   │   └── AudioImportViewModel.kt
-│   │
-│   ├── analyzer/                           # Audio analysis
-│   │   └── AnalyzerViewModel.kt
-│   │
-│   ├── player/                             # Playback controls
-│   │   └── PlayerViewModel.kt
-│   │
-│   ├── haptics/                            # Pattern playback
-│   │   └── HapticsViewModel.kt
-│   │
-│   └── visualizer/                         # Fractal visualization
-│       └── VisualizerViewModel.kt
-│
-├── MainActivity.kt                         # Host Compose UI
-└── BeatVibratorApp.kt                      # HiltApp + setup
- ```
+
  ---
+
+  ## 📅 Roadmap (MVP)
+  
+  - [ ] MP3 import (SAF)
+  - [x] MP3 extraction (Mp3-> Raw PCM)
+  - [x] RMS + low-pass filter on PCM buffer
+  - [x] Post-processing (amplitude mapping, cleanup, quantization)
+  - [ ] Dynamic visualization driven by RMS/onsets
+  - [ ] Playback ↔ vibration synchronization with latency offset
+  - [ ] Advanced `VibratorManager` integration (API ≥ S)
+  - [ ] debug: sensitivity, intensity, mapping type
+
+  ---
+
+  
   
   ## 🧠 Motivation & Vision
 
