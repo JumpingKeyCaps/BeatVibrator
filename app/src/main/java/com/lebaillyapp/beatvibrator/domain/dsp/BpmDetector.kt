@@ -2,6 +2,10 @@ package com.lebaillyapp.beatvibrator.domain.dsp
 
 import kotlin.math.roundToInt
 
+/**
+ * ## BpmDetector
+ *  permet de calculer le BPM d'un signal audio en utilisant l'autocorrélation.
+ */
 class BpmDetector {
 
     /**
