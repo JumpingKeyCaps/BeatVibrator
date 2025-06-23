@@ -1,4 +1,4 @@
-package com.beatvibrator.data.service
+package com.lebaillyapp.beatvibrator.data.service
 
 import android.content.Context
 import android.media.MediaCodec
@@ -7,7 +7,7 @@ import android.media.MediaFormat
 import android.net.Uri
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
-import com.lebaillyapp.beatvibrator.domain.DecodingResult
+import com.lebaillyapp.beatvibrator.domain.audioProcess.DecodingResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,34 +15,22 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.nio.ShortBuffer
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * ## Service de décodage audio offline (MP3 → PCM)
+ * ## Service de décodage audio offline (MP3 → PCM) - Version Optimisée
  *
  * Ce service utilise MediaExtractor + MediaCodec pour convertir efficacement
  * un fichier MP3 en échantillons PCM (float[]), utilisables ensuite pour des
- * traitements DSP ou des motifs de vibration synchronisés.
+ * traitements DSP afin de générer des motifs de vibration synchronisés.
  *
- * ### Pipeline :
- * 1. Extraction des frames audio via `MediaExtractor`
- * 2. Décodage rapide en mode offline via `MediaCodec`
- * 3. Conversion PCM brute → FloatArray mono
- * 4. Stockage par chunks pour éviter OOM
- *
- * ### Avantages :
- * -  Rapide et sans playback audio
- * -  Pas besoin d'ExoPlayer en lecture silencieuse
- * -  Format float[] normalisé mono (de -1.0 à +1.0)
- * -  Progression trackable via `StateFlow`
- *
- * Utilisation typique dans un `ViewModel` :
- * ```
- * val result = audioProcessorService.decodeAudioFile(myUri)
- * val samples = result.getAllSamplesFlat()
- * ```
+ * ### Améliorations v2 :
+ * - Buffer management moderne (pas de deprecated APIs)
+ * - Throttling des updates StateFlow
+ * - Timeouts optimisés
+ * - Gestion mémoire améliorée
+ * - Validation robuste des formats
  */
 @Singleton
 @OptIn(UnstableApi::class)
@@ -51,15 +39,13 @@ class AudioProcessorService @Inject constructor(
 ) {
 
     companion object {
-        private const val TIMEOUT_US = 10_000L // Timeout MediaCodec (µs)
-        private const val CHUNK_SIZE = 4096    // Taille d’un bloc de PCM
+        private const val DEQUEUE_TIMEOUT_US = 10_000L // 10ms timeout
+        private const val CHUNK_SIZE = 4096
+        private const val PROGRESS_UPDATE_INTERVAL_MS = 100L // Throttle progress updates
     }
 
     // === ÉTAT DU DÉCODAGE ===
 
-    /**
-     * Représente l’état global du décodage
-     */
     sealed class DecodingState {
         object Idle : DecodingState()
         data class Processing(val progress: Float) : DecodingState()
@@ -68,21 +54,10 @@ class AudioProcessorService @Inject constructor(
     }
 
     private val _decodingState = MutableStateFlow<DecodingState>(DecodingState.Idle)
-
-    /**
-     * Flux d’état observable depuis le ViewModel ou l’UI
-     */
     val decodingState: StateFlow<DecodingState> = _decodingState.asStateFlow()
 
     // === DÉCODAGE PRINCIPAL ===
 
-    /**
-     * Décode un fichier MP3 donné en échantillons PCM mono normalisés
-     *
-     * @param fileUri URI du fichier MP3 à décoder
-     * @return Un [DecodingResult] contenant les données PCM
-     * @throws Exception si le décodage échoue
-     */
     suspend fun decodeAudioFile(fileUri: Uri): DecodingResult = withContext(Dispatchers.IO) {
         _decodingState.value = DecodingState.Processing(0f)
 
@@ -96,20 +71,27 @@ class AudioProcessorService @Inject constructor(
             }
 
             val audioTrackIndex = findAudioTrack(mediaExtractor)
-            if (audioTrackIndex < 0) throw IllegalArgumentException("Aucune piste audio trouvée")
+            if (audioTrackIndex < 0) {
+                throw IllegalArgumentException("Aucune piste audio trouvée dans le fichier")
+            }
 
             mediaExtractor.selectTrack(audioTrackIndex)
             val format = mediaExtractor.getTrackFormat(audioTrackIndex)
 
-            // === 2. Configuration MediaCodec ===
+            // === 2. Validation et configuration MediaCodec ===
             val mimeType = format.getString(MediaFormat.KEY_MIME)
                 ?: throw IllegalArgumentException("Type MIME absent")
+
+            if (!mimeType.startsWith("audio/")) {
+                throw IllegalArgumentException("Format audio non supporté: $mimeType")
+            }
+
             mediaCodec = MediaCodec.createDecoderByType(mimeType).apply {
                 configure(format, null, null, 0)
                 start()
             }
 
-            // === 3. Métadonnées audio ===
+            // === 3. Métadonnées audio avec validation ===
             val sampleRate = format.getInteger(MediaFormat.KEY_SAMPLE_RATE)
             val channelCount = format.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
             val durationUs = if (format.containsKey(MediaFormat.KEY_DURATION)) {
@@ -118,51 +100,62 @@ class AudioProcessorService @Inject constructor(
                 0L
             }
 
-            // === 4. Boucle de décodage ===
+            // Validation des métadonnées
+            if (sampleRate <= 0 || channelCount <= 0) {
+                throw IllegalArgumentException("Métadonnées audio invalides: SR=$sampleRate, CH=$channelCount")
+            }
+
+            // === 4. Boucle de décodage optimisée ===
             val allSamples = mutableListOf<FloatArray>()
             var totalSamples = 0L
             var isInputComplete = false
             var isOutputComplete = false
+            var lastProgressUpdate = 0L
 
-            val inputBuffers = mediaCodec.inputBuffers
-            val outputBuffers = mediaCodec.outputBuffers
             val bufferInfo = MediaCodec.BufferInfo()
 
             while (!isOutputComplete) {
                 // --- Entrée : lire MP3 brut et alimenter MediaCodec ---
                 if (!isInputComplete) {
-                    val inIndex = mediaCodec.dequeueInputBuffer(50_000)
+                    val inIndex = mediaCodec.dequeueInputBuffer(DEQUEUE_TIMEOUT_US)
                     if (inIndex >= 0) {
-                        val inputBuffer = mediaCodec.getInputBuffer(inIndex) ?: continue
-                        inputBuffer.clear()
+                        val inputBuffer = mediaCodec.getInputBuffer(inIndex)
+                        if (inputBuffer != null) {
+                            inputBuffer.clear()
 
-                        val sampleSize = mediaExtractor.readSampleData(inputBuffer, 0)
-                        if (sampleSize >= 0) {
-                            val pts = mediaExtractor.sampleTime
-                            mediaCodec.queueInputBuffer(inIndex, 0, sampleSize, pts, 0)
-                            mediaExtractor.advance()
+                            val sampleSize = mediaExtractor.readSampleData(inputBuffer, 0)
+                            if (sampleSize >= 0) {
+                                val presentationTimeUs = mediaExtractor.sampleTime
+                                mediaCodec.queueInputBuffer(inIndex, 0, sampleSize, presentationTimeUs, 0)
+                                mediaExtractor.advance()
 
-                            // Progrès linéaire
-                            if (durationUs > 0) {
-                                val progress = (pts.toFloat() / durationUs).coerceIn(0f, 1f)
-                                _decodingState.value = DecodingState.Processing(progress)
+                                // Throttled progress updates
+                                val currentTime = System.currentTimeMillis()
+                                if (durationUs > 0 && currentTime - lastProgressUpdate > PROGRESS_UPDATE_INTERVAL_MS) {
+                                    val progress = (presentationTimeUs.toFloat() / durationUs).coerceIn(0f, 0.95f)
+                                    _decodingState.value = DecodingState.Processing(progress)
+                                    lastProgressUpdate = currentTime
+                                }
+                            } else {
+                                // End of stream
+                                mediaCodec.queueInputBuffer(inIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
+                                isInputComplete = true
                             }
-                        } else {
-                            mediaCodec.queueInputBuffer(inIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
-                            isInputComplete = true
                         }
                     }
                 }
 
                 // --- Sortie : lire PCM décodé et convertir ---
-                val outIndex = mediaCodec.dequeueOutputBuffer(bufferInfo, 50_000)
+                val outIndex = mediaCodec.dequeueOutputBuffer(bufferInfo, DEQUEUE_TIMEOUT_US)
                 when {
                     outIndex >= 0 -> {
-                        val outputBuffer = mediaCodec.getOutputBuffer(outIndex) ?: continue
-                        if (bufferInfo.size > 0) {
+                        val outputBuffer = mediaCodec.getOutputBuffer(outIndex)
+                        if (outputBuffer != null && bufferInfo.size > 0) {
                             val pcmSamples = extractPcmSamples(outputBuffer, bufferInfo, channelCount)
-                            allSamples.add(pcmSamples)
-                            totalSamples += pcmSamples.size
+                            if (pcmSamples.isNotEmpty()) {
+                                allSamples.add(pcmSamples)
+                                totalSamples += pcmSamples.size
+                            }
                         }
                         mediaCodec.releaseOutputBuffer(outIndex, false)
 
@@ -171,12 +164,24 @@ class AudioProcessorService @Inject constructor(
                         }
                     }
                     outIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
-                        // Format dynamique ignoré ici
+                        // Format change - usually safe to ignore for audio
+                        val newFormat = mediaCodec.outputFormat
+                        // Log.d("AudioProcessor", "Output format changed: $newFormat")
+                    }
+                    outIndex == MediaCodec.INFO_TRY_AGAIN_LATER -> {
+                        // Normal - just continue
+                    }
+                    else -> {
+                        // Unexpected index, continue
                     }
                 }
             }
 
-            // === 5. Construction du résultat final ===
+            // === 5. Validation et construction du résultat ===
+            if (allSamples.isEmpty()) {
+                throw IllegalStateException("Aucun échantillon audio décodé")
+            }
+
             val result = DecodingResult(
                 samples = allSamples,
                 sampleRate = sampleRate,
@@ -185,88 +190,96 @@ class AudioProcessorService @Inject constructor(
                 durationSeconds = totalSamples.toFloat() / sampleRate,
                 originalDurationUs = durationUs
             )
+
             _decodingState.value = DecodingState.Completed(result)
             result
+
         } catch (e: Exception) {
-            _decodingState.value = DecodingState.Error("Erreur: ${e.message}")
-            throw e
+            val errorMsg = "Erreur décodage audio: ${e.message}"
+            _decodingState.value = DecodingState.Error(errorMsg)
+            throw IllegalStateException(errorMsg, e)
         } finally {
+            // Nettoyage robuste
             try {
-                mediaCodec?.stop(); mediaCodec?.release()
+                mediaCodec?.stop()
+            } catch (e: Exception) {
+                // Ignore stop errors
+            }
+            try {
+                mediaCodec?.release()
                 mediaExtractor?.release()
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                // Ignore cleanup errors
             }
         }
     }
 
     // === OUTILS INTERNES ===
 
-    /**
-     * Recherche la première piste audio dans un `MediaExtractor`
-     *
-     * @return Index de la piste audio, ou -1 si aucune trouvée
-     */
     private fun findAudioTrack(extractor: MediaExtractor): Int {
         for (i in 0 until extractor.trackCount) {
             val format = extractor.getTrackFormat(i)
             val mime = format.getString(MediaFormat.KEY_MIME) ?: continue
-            if (mime.startsWith("audio/")) return i
+            if (mime.startsWith("audio/")) {
+                return i
+            }
         }
         return -1
     }
 
-    /**
-     * Extrait un tableau PCM (float[] mono) à partir d’un buffer MediaCodec
-     *
-     * @param buffer Buffer brut de sortie
-     * @param bufferInfo Métadonnées du chunk
-     * @param channelCount Nombre de canaux (1 = mono, 2 = stéréo)
-     */
     private fun extractPcmSamples(
         buffer: ByteBuffer,
         bufferInfo: MediaCodec.BufferInfo,
         channelCount: Int
     ): FloatArray {
+        // Validation buffer
+        if (bufferInfo.size <= 0) return floatArrayOf()
+
         buffer.position(bufferInfo.offset)
         buffer.limit(bufferInfo.offset + bufferInfo.size)
 
         val shortBuffer = buffer.order(ByteOrder.LITTLE_ENDIAN).asShortBuffer()
-        val rawSamples = ShortArray(shortBuffer.remaining())
+        val remainingSamples = shortBuffer.remaining()
+
+        if (remainingSamples <= 0) return floatArrayOf()
+
+        val rawSamples = ShortArray(remainingSamples)
         shortBuffer.get(rawSamples)
 
         return convertToFloatSamples(rawSamples, channelCount)
     }
 
-    /**
-     * Convertit des données PCM 16-bit (short[]) en float[] mono normalisé
-     *
-     * @param samples Tableau brut de short PCM
-     * @param channelCount Nombre de canaux
-     * @return Tableau mono en float, normalisé [-1f, +1f]
-     */
     private fun convertToFloatSamples(samples: ShortArray, channelCount: Int): FloatArray {
+        if (samples.isEmpty()) return floatArrayOf()
+
         return when (channelCount) {
-            1 -> FloatArray(samples.size) { i ->
-                samples[i] / Short.MAX_VALUE.toFloat()
-            }
-            2 -> FloatArray(samples.size / 2) { i ->
-                val left = samples[i * 2] / Short.MAX_VALUE.toFloat()
-                val right = samples[i * 2 + 1] / Short.MAX_VALUE.toFloat()
-                (left + right) * 0.5f
-            }
-            else -> FloatArray(samples.size / channelCount) { i ->
-                var sum = 0f
-                for (ch in 0 until channelCount) {
-                    sum += samples[i * channelCount + ch] / Short.MAX_VALUE.toFloat()
+            1 -> {
+                // Mono direct
+                FloatArray(samples.size) { i ->
+                    samples[i] / Short.MAX_VALUE.toFloat()
                 }
-                sum / channelCount
+            }
+            2 -> {
+                // Stéréo → Mono (moyennage)
+                FloatArray(samples.size / 2) { i ->
+                    val left = samples[i * 2] / Short.MAX_VALUE.toFloat()
+                    val right = samples[i * 2 + 1] / Short.MAX_VALUE.toFloat()
+                    (left + right) * 0.5f
+                }
+            }
+            else -> {
+                // Multi-canal → Mono (moyennage)
+                FloatArray(samples.size / channelCount) { i ->
+                    var sum = 0f
+                    for (ch in 0 until channelCount) {
+                        sum += samples[i * channelCount + ch] / Short.MAX_VALUE.toFloat()
+                    }
+                    sum / channelCount
+                }
             }
         }
     }
 
-    /**
-     * Réinitialise l’état interne du service (utile après une erreur)
-     */
     fun reset() {
         _decodingState.value = DecodingState.Idle
     }
