@@ -1,4 +1,4 @@
-package com.lebaillyapp.beatvibrator.domain
+package com.lebaillyapp.beatvibrator.domain.audioProcess
 
 /**
  * Données de sortie du décodage audio complet
