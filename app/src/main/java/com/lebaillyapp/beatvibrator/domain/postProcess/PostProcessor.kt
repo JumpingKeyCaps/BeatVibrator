@@ -5,7 +5,7 @@ import kotlin.math.pow
 import kotlin.math.round
 
 /**
- * ## PostProcessor
+ * ## PostProcessor (LEGACY)
  *
  * PostProcessor est un module de traitement final permettant de convertir des événements d'onsets
  * (détectés en amont via FFT, RMS, etc.) en une séquence propre et perceptible de pulses vibratoires.
