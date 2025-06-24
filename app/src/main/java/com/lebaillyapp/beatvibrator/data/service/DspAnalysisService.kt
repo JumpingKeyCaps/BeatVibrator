@@ -30,8 +30,9 @@ import javax.inject.Singleton
  * ### Pipeline DSP optimisé :
  * 1. Filtrage passe-bas Butterworth (200Hz) pour isoler les basses fréquences
  * 2. Calcul RMS sur le signal filtré (pour l'énergie temporelle)
- * 3. Spectrogramme FFT sur le signal filtré (pour l'analyse fréquentielle)
- * 4. Détection d'onsets avec peak picking (pour les transitoires)
+ * 3. Détection de BPM (pour la synchronisation temporelle en post-processing)
+ * 4. Spectrogramme FFT sur le signal filtré (pour l'analyse fréquentielle)
+ * 5. Détection d'onsets avec peak picking (pour les transitoires)
  *
  * ### Avantages :
  * - Suivi de progression en temps réel
