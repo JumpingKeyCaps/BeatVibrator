@@ -18,13 +18,15 @@
 
   ## 🚀 Features
 
-  - 🎧 **MP3 Import** via Storage Access Framework (SAF)
-  - 🔎 **On-device DSP analysis**: FFT, envelope, RMS, transient detection
-  - 📳 **Pre-computed** `VibrationPattern` optimized for LRA motors
-  - 🌈 **Pseudo-3D fractal visualization** driven by the audio signal
-  - 💿 Display of **audio metadata** (title, artist, duration…)
-  - ⏯️ **Basic playback controls** (play, pause, stop)
-  - 🌌 **Real-time haptic rendering** synced with playback
+  -  **MP3 Import** via Storage Access Framework (SAF)
+  -  **On-device DSP analysis**: FFT, envelope, RMS, transient detection
+  -  **Pre-computed** `VibrationPattern` optimized for LRA motors
+  -  **Efficient MP3 Decoding**: MP3 → PCM via `MediaExtractor` / `MediaCodec`
+  -  **Full DSP Analysis**: Low-pass filter, RMS, FFT, onsets, BPM detection
+  -  **Smart Post-processing**: Perceptual compression & merging of haptic pulses
+  -  **Precise Synchronization**: Time-aligned vibration events (LRA)
+  -  **Modern Architecture**: Clean Architecture with Hilt injection
+  -  **Live State Tracking**: `StateFlow` monitoring for each stage
 
   ---
 
@@ -141,6 +143,37 @@ A step-by-step breakdown of the signal processing path:
 
   ---
 
+## 🧠 Custom DSP Components
+
+- `FFT`: Radix-2, pure Kotlin, with Hamming window + overlap
+- `ButterworthFilter`: Biquad 2nd-order low-pass with internal state
+- `OnsetDetector`: Adaptive threshold peak picking on spectral flux
+- `RmsCalculator`: Sliding window RMS with optional normalization
+- `BpmDetector`: Autocorrelation-based BPM estimator on RMS signal
+
+---
+
+## ⚙️ Technical Optimizations
+
+ ### Performance
+  - Efficient buffer use (chunked + throttled)
+  - Codec timeout management
+  - 50% overlap on RMS/FFT for smoother analysis
+  - Early format validation to skip unsupported inputs
+ 
+ ### Memory
+  - Systematic cleanup of MediaCodec / Extractor
+  - Block-based decoding to avoid memory peaks
+  - Filter internal state reset between runs
+ 
+ ### DSP Enhancements
+  - Perceptual mapping: intensity^0.6
+  - Temporal merge of close onsets (≤120ms)
+  - BPM-based rhythmic quantization (optional)
+  - Adaptive peak picking for transient detection
+
+  ---
+
  ## 🧪 Limitations & Device Requirements
 
   - Works **only** on Android devices with a **high-quality LRA motor** (API 31+ recommended).
@@ -179,7 +212,29 @@ A step-by-step breakdown of the signal processing path:
 
   ---
 
+ ## 📋 Requirements
   
+  - Android SDK: 24+
+  - Kotlin: 1.8+
+  - Dagger Hilt: for DI
+  - Coroutines: for async processing
+
+ ### Permissions
+ 
+  ```
+ <uses-permission android:name="android.permission.VIBRATE" />
+ <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+  ```
+ ---
+ ### 🔮 Future Extensions
+
+  - Real-time playback sync (ExoPlayer + Vibrator)
+  - Additional formats (WAV, AAC, FLAC)
+  - Visual feedback (onsets, spectrograms)
+  - Genre-specific presets (EDM, Rock, Classical)
+  - Haptic calibration for different phone motors
+  - Import/export of haptic patterns
+ --- 
   
   ## 🧠 Motivation & Vision
 
