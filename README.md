@@ -219,12 +219,15 @@ A step-by-step breakdown of the signal processing path:
   - Kotlin: 2.0.0+
   - Dagger Hilt: for DI
   - Coroutines: for async processing
+  - Media3 Exoplayer : 1.7.1+ (K2 compatibility)
 
  ### Permissions
  
   ```
  <uses-permission android:name="android.permission.VIBRATE" />
  <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+ <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+
   ```
  ---
  ### 🔮 Future Extensions
