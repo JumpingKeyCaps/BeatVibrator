@@ -182,10 +182,14 @@ A step-by-step breakdown of the signal processing path:
 
  ## 🧪 Limitations & Device Requirements
 
-  - Works **only** on Android devices with a **high-quality LRA motor** (API 31+ recommended).
-  - Supports **one MP3 file at a time** — no playlist or queue.
-  - Haptic perception is **highly device-dependent**, influenced by chassis design and user sensitivity.
-  - Sync precision is limited by **hardware vibration latency** (typically 30–50ms).
+  - **Device Compatibility**: Works only on Android devices equipped with a high-quality LRA (Linear Resonant Actuator) motor (API 31+ recommended). Haptic perception is highly device-dependent, influenced by chassis design and user sensitivity.
+ 
+  - **Audio File Support**: Supports only one MP3 file at a time—no playlist or queue.
+ 
+  - **Haptic Sync Precision**: Sync precision is limited by hardware vibration latency (typically 30–50ms for LRA). For instance, a Galaxy S8 (2017) might have an LRA latency of around 50ms, whereas a recent Pixel device could achieve closer to 20ms. This latency is a critical factor for the fidelity of the haptic experience.
+  
+  - **Difficulty in Vibrator Identification**: It's extremely challenging to know the exact type of vibrator embedded in a phone and its precise technical specifications (like latency). Manufacturers generally provide very little detailed information on this.
+     This knowledge can often only be gained through deduction, for example, by observing if the device supports amplitude control via `VibrationEffect.setAmplitude()` or, more recently, by using `VibrationEffect.setLraCustomEffect()` and the `VibrationEffect.getLraType()` method available from API 34, which can offer clues about the type of vibrator (ERM or LRA) and others capabilities.
 
   ---
 
