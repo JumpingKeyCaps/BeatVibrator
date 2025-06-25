@@ -50,6 +50,7 @@
   | Custom DSP (FFT, RMS, IIR) | Time/frequency domain audio analysis            |
   | Post-Processing        | Cleaning, BPM synch,...                             |
   | VibratorManager        | Fine-grained haptic pattern handling                |
+  | Exoplayer 3            | Audio Mp3 playback                                  |
   | Coroutine Flow         | Async processing and playback-haptics sync          |
   | Hilt (optional)        | Modular dependency injection                        |
 
@@ -87,7 +88,7 @@ A step-by-step breakdown of the signal processing path:
    - In-memory storage for synchronized playback
 
 5. **Synchronized playback**:
-   - **Audio playback** using `ExoPlayer`
+   - **Audio playback** using `ExoPlayer`(media3)
    - Dedicated coroutine for triggering vibrations during playback
    - Latency compensation (LRA offset ~20–50ms)
    - Sequential calls to `VibrationEffect` in real-time
@@ -215,7 +216,7 @@ A step-by-step breakdown of the signal processing path:
  ## 📋 Requirements
   
   - Android SDK: 24+
-  - Kotlin: 1.8+
+  - Kotlin: 2.0.0+
   - Dagger Hilt: for DI
   - Coroutines: for async processing
 
