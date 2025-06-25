@@ -60,11 +60,14 @@
 
 A step-by-step breakdown of the signal processing path:
 
-1. **Audio decoding** using `MediaCodec` (offline / chunk appr)  
+1. **Audio decoding** using `MediaCodec` (offline / chunk)
+   
    → Direct MP3 → PCM (16-bit signed, mono/stereo) without playback  
    *(Used only for analysis and vibration generation, not audio output)*
 
-   - Chunk-based processing : Read and process the audio data in small buffers (or chunks) rather than loading the entire MP3 file into memory all at once. This strategy is crucial for preventing Out Of Memory (OOM) 
+   - Chunk-based processing : Read and process the audio data in small buffers (or chunks) rather than loading the entire MP3 file into memory all at once.
+
+     This strategy is crucial for preventing Out Of Memory (OOM) 
 
 3. **DSP processing**:
    - Short → Float conversion [-1.0f, +1.0f]
