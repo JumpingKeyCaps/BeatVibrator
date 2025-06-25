@@ -110,7 +110,7 @@ A step-by-step breakdown of the signal processing path:
       +---------------------------------------------+
       | 2. MP3 Decoding → PCM                       |
       |    - MediaExtractor + MediaCodec            |
-      |    - PCM Buffer/chunk (FloatArray)                |
+      |    - PCM Buffer/chunk (FloatArray)          |
       +--------------------+------------------------+
                            |
                            v
