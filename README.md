@@ -60,18 +60,20 @@
 
 A step-by-step breakdown of the signal processing path:
 
-1. **Audio decoding** using `MediaCodec` (offline)  
+1. **Audio decoding** using `MediaCodec` (offline / chunk appr)  
    → Direct MP3 → PCM (16-bit signed, mono/stereo) without playback  
    *(Used only for analysis and vibration generation, not audio output)*
 
-2. **DSP processing**:
+   - Chunk-based processing : Read and process the audio data in small buffers (or chunks) rather than loading the entire MP3 file into memory all at once. This strategy is crucial for preventing Out Of Memory (OOM) 
+
+3. **DSP processing**:
    - Short → Float conversion [-1.0f, +1.0f]
    - Optional stereo averaging
    - 2nd order Butterworth low-pass filter (100–200 Hz)
    - RMS over 10–30ms windows
    - Onset detection (RMS delta > dynamic threshold)
 
-3. **Post-processing refinement**:
+4. **Post-processing refinement**:
    - Normalize RMS → amplitude (0–255) using exponential mapping
    - Skip low-amplitude segments (threshold gating)
    - Inject stronger impulses on detected onsets
@@ -82,12 +84,12 @@ A step-by-step breakdown of the signal processing path:
    - Optional beat quantization (snap to BPM grid)
    - Clamp & sort final timeline
 
-4. **Pattern generation**:
+5. **Pattern generation**:
    - Build list of `HapticEvent(timestampMs, durationMs, amplitude)`
    - Merge consecutive similar segments for optimization
    - In-memory storage for synchronized playback
 
-5. **Synchronized playback**:
+6. **Synchronized playback**:
    - **Audio playback** using `ExoPlayer`(media3)
    - Dedicated coroutine for triggering vibrations during playback
    - Latency compensation (LRA offset ~20–50ms)
@@ -105,7 +107,7 @@ A step-by-step breakdown of the signal processing path:
       +---------------------------------------------+
       | 2. MP3 Decoding → PCM                       |
       |    - MediaExtractor + MediaCodec            |
-      |    - PCM Buffer (FloatArray)                |
+      |    - PCM Buffer/chunk (FloatArray)                |
       +--------------------+------------------------+
                            |
                            v
