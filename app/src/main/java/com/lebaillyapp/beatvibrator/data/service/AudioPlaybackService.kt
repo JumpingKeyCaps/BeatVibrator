@@ -1,6 +1,5 @@
 package com.lebaillyapp.beatvibrator.data.service
 
-
 import android.content.Context
 import android.net.Uri
 import androidx.annotation.MainThread
@@ -75,8 +74,8 @@ class AudioPlaybackService @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
 
-    /** CoroutineScope lié au thread principal pour lancer la surveillance de la position. */
-    private val scope = CoroutineScope(Dispatchers.Main)
+    /** CoroutineScope lié au thread principal avec SupervisorJob pour éviter la propagation d'erreurs. */
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     /** Instance interne du player Media3 ExoPlayer, null si non initialisé. */
     private var player: ExoPlayer? = null
@@ -110,25 +109,25 @@ class AudioPlaybackService @Inject constructor(
      */
     @OptIn(UnstableApi::class)
     @MainThread
-    fun play(uri: Uri) {
-        if (player == null) {
-            player = ExoPlayer.Builder(context).build().apply {
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(C.USAGE_MEDIA)
-                        .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
-                        .build(),
-                    true
-                )
-                addListener(playerListener)
-            }
+    fun play(uri: Uri)
+    {
+        val currentPlayer = player ?: ExoPlayer.Builder(context).build().apply {
+            setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(C.USAGE_MEDIA)
+                    .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+                    .build(),
+                true
+            )
+            addListener(playerListener)
+            player = this
         }
 
         _playerState.value = PlayerState.Preparing
 
         val mediaSource = buildMediaSource(uri)
 
-        player?.apply {
+        currentPlayer.apply {
             setMediaSource(mediaSource)
             prepare()
             playWhenReady = true
@@ -137,10 +136,16 @@ class AudioPlaybackService @Inject constructor(
         // Lance une coroutine qui met à jour régulièrement la position et durée
         positionJob?.cancel()
         positionJob = scope.launch {
-            while (player != null && player!!.isPlaying) {
-                _currentPositionMs.value = player!!.currentPosition
-                _durationMs.value = player!!.duration.takeIf { it != C.TIME_UNSET } ?: 0L
-                delay(200)
+            try {
+                while (isActive && player?.isPlaying == true) {
+                    player?.let { p ->
+                        _currentPositionMs.value = p.currentPosition
+                        _durationMs.value = p.duration.takeIf { it != C.TIME_UNSET } ?: 0L
+                    }
+                    delay(200)
+                }
+            } catch (e: Exception) {
+                // La coroutine se termine proprement en cas d'erreur
             }
         }
     }
@@ -152,10 +157,24 @@ class AudioPlaybackService @Inject constructor(
      */
     @MainThread
     fun pause() {
-        player?.let {
-            if (it.isPlaying) {
-                it.playWhenReady = false
+        player?.let { p ->
+            if (p.isPlaying) {
+                p.playWhenReady = false
                 _playerState.value = PlayerState.Paused
+            }
+        }
+    }
+
+    /**
+     * Reprend la lecture si le player est en pause et prêt.
+     *
+     * Ne fait rien si le player n'est pas initialisé ou déjà en lecture.
+     */
+    @MainThread
+    fun resume() {
+        player?.let { p ->
+            if (!p.isPlaying && p.playbackState == Player.STATE_READY) {
+                p.playWhenReady = true
             }
         }
     }
@@ -168,12 +187,22 @@ class AudioPlaybackService @Inject constructor(
      */
     @MainThread
     fun stop() {
-        player?.let {
-            it.stop()
+        player?.let { p ->
+            p.stop()
             _playerState.value = PlayerState.Stopped
             _currentPositionMs.value = 0L
         }
         positionJob?.cancel()
+    }
+
+    /**
+     * Permet de naviguer à une position spécifique dans le fichier audio.
+     *
+     * @param positionMs Position en millisecondes où positionner la lecture.
+     */
+    @MainThread
+    fun seekTo(positionMs: Long) {
+        player?.seekTo(positionMs)
     }
 
     /**
@@ -182,11 +211,12 @@ class AudioPlaybackService @Inject constructor(
      * Cette méthode doit être appelée impérativement lors de la destruction
      * du ViewModel ou de l'application pour éviter les fuites mémoire.
      *
-     * Annule aussi la mise à jour périodique de la position et remet
-     * tous les flows à leur état initial.
+     * Annule aussi la mise à jour périodique de la position, le scope des coroutines
+     * et remet tous les flows à leur état initial.
      */
     @MainThread
     fun release() {
+        scope.cancel()
         positionJob?.cancel()
         player?.run {
             removeListener(playerListener)
@@ -197,6 +227,13 @@ class AudioPlaybackService @Inject constructor(
         _currentPositionMs.value = 0L
         _durationMs.value = 0L
     }
+
+    /**
+     * Vérifie si le player est prêt pour la lecture.
+     *
+     * @return true si le player est dans l'état STATE_READY, false sinon.
+     */
+    private fun isPlayerReady(): Boolean = player?.playbackState == Player.STATE_READY
 
     /**
      * Construit un [MediaSource] pour Media3 ExoPlayer à partir d'un [Uri] local.
@@ -225,6 +262,9 @@ class AudioPlaybackService @Inject constructor(
             when (state) {
                 Player.STATE_BUFFERING -> _playerState.value = PlayerState.Preparing
                 Player.STATE_READY -> {
+                    // Mettre à jour la durée dès que possible
+                    _durationMs.value = player?.duration?.takeIf { it != C.TIME_UNSET } ?: 0L
+
                     if (player?.playWhenReady == true) {
                         _playerState.value = PlayerState.Playing
                     } else {
