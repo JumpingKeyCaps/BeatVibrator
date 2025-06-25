@@ -67,7 +67,7 @@ A step-by-step breakdown of the signal processing path:
 2. **DSP processing**:
    - Short → Float conversion [-1.0f, +1.0f]
    - Optional stereo averaging
-   - 2nd order Butterworth low-pass filter (100–250 Hz)
+   - 2nd order Butterworth low-pass filter (100–200 Hz)
    - RMS over 10–30ms windows
    - Onset detection (RMS delta > dynamic threshold)
 
