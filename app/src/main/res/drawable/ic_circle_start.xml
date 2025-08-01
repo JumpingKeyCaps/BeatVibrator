@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+  <!-- Ce premier chemin va se transformer en la petite icône du bouton de lecture -->
+  <path
+      android:name="small_circle"
+      android:pathData="M9.67,13.922 C10.41,13.922 11.01,14.522 11.01,15.262 C11.01,16.002 10.41,16.592 9.67,16.592 C8.93,16.592 8.34,16.002 8.34,15.262 C8.34,14.522 8.93,13.922 9.67,13.922 Z"
+      android:fillColor="#292D32"/>
+
+  <!-- Ce deuxième chemin va se transformer en le contour complexe du bouton de lecture -->
+  <path
+      android:name="large_circle"
+      android:pathData="M12,2A10,10 0,1 1,12 22A10,10 0,1 1,12 2Z"
+      android:fillColor="#00000000"
+      android:strokeColor="#292D32"
+      android:strokeWidth="2"/>
+
+</vector>
