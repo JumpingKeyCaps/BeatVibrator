@@ -16,7 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.*
-import androidx.compose.runtime.* // Garde cette import pour 'remember' si tu l'utilises pour des états UI locaux et non critiques
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,7 +28,6 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -36,6 +35,29 @@ import com.lebaillyapp.beatvibrator.ui.theme.AlbumFont
 import com.lebaillyapp.beatvibrator.ui.theme.ArtistFont
 import com.lebaillyapp.beatvibrator.ui.theme.MainFont
 
+/**
+ * # MicroPlayerComponent
+ *
+ * Composant micro-player compact affichant :
+ * - un bouton play/pause animé,
+ * - le temps écoulé,
+ * - le titre, album, artiste avec gestion de débordement,
+ * - une barre de progression personnalisée.
+ *
+ * Les états externes (lecture, progression, temps, actions) sont injectés depuis le parent
+ * pour respecter une séparation de la logique et de la vue (ex : ViewModel).
+ *
+ * @param modifier Modificateur Jetpack Compose à appliquer au conteneur principal.
+ * @param songTitle Titre de la chanson affiché (par défaut "Unknown Song").
+ * @param albumName Nom de l'album (par défaut "Unknown Album").
+ * @param artistName Nom de l'artiste (par défaut "Unknown Artist").
+ * @param isPlaying Indique si la lecture est en cours (état externe).
+ * @param currentProgress Fraction de progression (0.0f..1.0f) de la lecture.
+ * @param elapsedTimeMillis Temps écoulé en millisecondes depuis le début de la piste.
+ * @param totalDurationMillis Durée totale de la piste en millisecondes.
+ * @param onTogglePlayPause Callback déclenché lors de l'appui sur play / pause.
+ * @param elevation Élévation de la carte pour l'ombre (par défaut 8.dp).
+ */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun MicroPlayerComponent(
@@ -43,43 +65,34 @@ fun MicroPlayerComponent(
     songTitle: String = "Unknown Song",
     albumName: String = "Unknown Album",
     artistName: String = "Unknown Artist",
-    // --- Nouveaux paramètres pour externaliser la logique ---
     isPlaying: Boolean, // L'état de lecture/pause est passé en paramètre
     currentProgress: Float, // La progression (0.0f à 1.0f) est passée en paramètre
     elapsedTimeMillis: Long, // Le temps écoulé est passé en paramètre
     totalDurationMillis: Long, // La durée totale est passée en paramètre
     onTogglePlayPause: () -> Unit, // Le callback pour l'action play/pause
-    // --------------------------------------------------------
     elevation: Dp = 8.dp
 ) {
-    // Suppression des 'remember { mutableStateOf(...) }' et 'LaunchedEffect'
-    // Ils seront gérés par le composant parent ou un ViewModel plus tard.
 
     // Transition pour animer les changements entre play / pause
-    // Reste ici car c'est une animation visuelle basée sur l'état 'isPlaying'
     val transition = updateTransition(targetState = isPlaying, label = "PlayPauseTransition")
 
     val timerFontSizeSp by transition.animateFloat(
         transitionSpec = { tween(durationMillis = 400, easing = LinearEasing) },
         label = "TimerFontSize"
-    ) { playing ->
-        if (playing) 32f else 22f
-    }
+    ) { playing -> if (playing) 32f else 22f }
 
     val timerWidthDp by transition.animateDp(
         transitionSpec = { tween(durationMillis = 400, easing = LinearEasing) },
         label = "TimerWidth"
-    ) { playing ->
-        if (playing) 94.dp else 66.dp
-    }
+    ) { playing -> if (playing) 94.dp else 66.dp}
 
     val infoAlpha by transition.animateFloat(
         transitionSpec = { tween(durationMillis = 400, easing = LinearEasing) },
         label = "InfoAlpha"
-    ) { playing ->
-        if (playing) 0.8f else 1f
-    }
+    ) { playing ->if (playing) 0.8f else 1f }
 
+
+    //Composition
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -122,7 +135,6 @@ fun MicroPlayerComponent(
                     verticalArrangement = Arrangement.Center
                 ) {
                     Spacer(modifier = Modifier.height(10.dp))
-
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -141,9 +153,7 @@ fun MicroPlayerComponent(
                                 .width(timerWidthDp)
                                 .offset(y = (-10).dp)
                         )
-
                         Spacer(Modifier.width(0.dp))
-
                         Column(
                             modifier = Modifier
                                 .weight(1f)
@@ -180,7 +190,6 @@ fun MicroPlayerComponent(
                             )
                         }
                     }
-
                     // Utilise currentProgress directement
                     CustomProgressBar(
                         progress = currentProgress,
@@ -199,7 +208,14 @@ fun MicroPlayerComponent(
     }
 }
 
-// PlayPauseButton et CustomProgressBar restent inchangés
+/**
+ * ## PlayPauseButton
+ * Bouton circulaire avec ombre interne simulée, affichant l'icône Play ou Pause selon l'état.
+ *
+ * @param isPlaying Indique si la lecture est en cours. Change l'icône affichée.
+ * @param onTogglePlay Callback déclenché lorsqu'on clique sur le bouton.
+ * @param modifier Modificateur à appliquer au conteneur du bouton.
+ */
 @Composable
 fun PlayPauseButton(
     isPlaying: Boolean,
@@ -247,6 +263,17 @@ fun PlayPauseButton(
     }
 }
 
+/**
+ * ## CustomProgressBar
+ * Barre de progression customisée avec coin arrondi.
+ *
+ * @param modifier Modificateur à appliquer à la barre.
+ * @param progress Fraction de progression (0.0f..1.0f).
+ * @param height Hauteur de la barre.
+ * @param trackColor Couleur du fond (piste) de la progression.
+ * @param progressColor Couleur du segment progressif.
+ * @param cornerRadius Rayon des coins arrondis.
+ */
 @Composable
 fun CustomProgressBar(
     modifier: Modifier = Modifier,
