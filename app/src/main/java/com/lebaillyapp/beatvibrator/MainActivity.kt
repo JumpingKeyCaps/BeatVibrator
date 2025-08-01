@@ -27,18 +27,23 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
-import com.lebaillyapp.beatvibrator.ui.pullToLoad.DragToSwipeScreen
-import com.lebaillyapp.beatvibrator.ui.pullToLoad.PullToLoadScreen
 import com.lebaillyapp.beatvibrator.ui.player.MicroPlayerComponent
+import com.lebaillyapp.beatvibrator.ui.pullToLoad.PullToLoadScreen
 import com.lebaillyapp.beatvibrator.ui.theme.BeatVibratorTheme
 import dagger.hilt.android.AndroidEntryPoint
-import androidx.compose.ui.graphics.lerp // Importez lerp pour l'interpolation
 
+/**
+ * Point d'entrée principal de l'application. Cette activité gère la configuration de l'interface
+ * utilisateur, notamment la couleur de la barre système, l'arrière-plan dynamique en fonction
+ * du glissement, et l'intégration des différents composants de l'application.
+ *
+ * Elle utilise [dagger.hilt.android.AndroidEntryPoint] pour l'injection de dépendances.
+ */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -54,37 +59,32 @@ class MainActivity : ComponentActivity() {
                     useLightNavigationBarIcons = true
                 )
 
-                // Étape 1 : Définir les couleurs de début et de fin pour le gradient
+                // Les couleurs de début et de fin pour l'interpolation du dégradé de fond.
                 val startColor = Color(0xFFC6FF00)
                 val endColor = Color(0xFF1DE9B6)
 
-                // Étape 2 : Créer un état pour stocker la valeur de l'offset de glissement
+                // L'état qui stocke le décalage (offset) de l'action de glissement.
                 var pullOffset by remember { mutableFloatStateOf(0f) }
 
-                // Étape 3 : Calculer une progression (de 0.0f à 1.0f) basée sur l'offset
+                // Définit le seuil de glissement pour calculer la progression.
                 val pullThreshold = 650f
+                // Calcule la progression (0.0f à 1.0f) en fonction de l'offset de glissement.
                 val progress = (pullOffset / pullThreshold).coerceIn(0f, 1f)
 
-                // Étape 4 : Utiliser lerp pour interpoler la couleur de fond
+                // Interpole la couleur de fond en fonction de la progression.
                 val backgroundColor = lerp(startColor, endColor, progress)
 
-                // Utilise un Box pour empiler les éléments
+                // Utilise un Box pour empiler les éléments de l'écran.
                 Box(
                     modifier = Modifier.fillMaxSize()
-                        // Étape 5 : Appliquer la couleur de fond dynamique
                         .background(backgroundColor)
                 ) {
-                    // On enveloppe le contenu principal de l'écran dans notre nouveau conteneur de glissement.
-                    // C'est cette partie qui va bouger.
+                    // Le contenu principal de l'écran, enveloppé dans un composant de glissement.
                     PullToLoadScreen(
-                        // On passe le callback pour mettre à jour l'état de l'offset
-                        onOffsetChanged = { offset ->
-                            pullOffset = offset
-                        },
-                        onActionTriggered = {
-                            // Ici,  appeler la fonction SAF plus tard
-                            // Pour le moment, l'action est gérée par le Toast dans le composant
-                        }
+                        // Callback pour mettre à jour l'état de l'offset en fonction du glissement.
+                        onOffsetChanged = { offset -> pullOffset = offset },
+                        // Callback pour déclencher une action lorsque le glissement est terminé.
+                        onActionTriggered = { /* L'action de chargement sera implémentée ici */ }
                     ) {
                         Card(
                             modifier = Modifier.fillMaxSize(),
@@ -103,14 +103,13 @@ class MainActivity : ComponentActivity() {
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.Center
                                 ) {
-
+                                    // Le contenu de la colonne est vide dans cet exemple
                                 }
                             }
                         }
                     }
 
-                    // Le MicroPlayerComponent est positionné en bas,
-                    // en dehors de DragToSwipeScreen, donc il reste fixe.
+                    // Le lecteur de musique est positionné en bas et reste fixe pendant le glissement.
                     PlayerControls(modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 20.dp))
                 }
             }
@@ -119,8 +118,10 @@ class MainActivity : ComponentActivity() {
 }
 
 /**
- * Ce composable gère l'état du lecteur et affiche le MicroPlayerComponent.
- * Il est maintenant séparé de la logique de glissement.
+ * Gère l'état et l'affichage du composant de lecteur de musique.
+ * Simule la lecture et l'avancement d'une chanson.
+ *
+ * @param modifier Le [Modifier] à appliquer au composant.
  */
 @Composable
 fun PlayerControls(modifier: Modifier = Modifier) {
@@ -129,6 +130,7 @@ fun PlayerControls(modifier: Modifier = Modifier) {
     var elapsedTimeMillis by remember { mutableLongStateOf(0L) }
     val totalDurationMillis = 150000L
 
+    // Simule la progression de la lecture de la musique
     LaunchedEffect(isPlaying) {
         if (isPlaying) {
             while (elapsedTimeMillis < totalDurationMillis) {
@@ -136,6 +138,7 @@ fun PlayerControls(modifier: Modifier = Modifier) {
                 elapsedTimeMillis += 1000L
                 currentProgress = (elapsedTimeMillis.toFloat() / totalDurationMillis).coerceAtMost(1f)
             }
+            // Réinitialise l'état une fois la chanson terminée
             isPlaying = false
             elapsedTimeMillis = 0L
             currentProgress = 0f
@@ -156,7 +159,14 @@ fun PlayerControls(modifier: Modifier = Modifier) {
     )
 }
 
-
+/**
+ * Un composable qui définit la couleur et le style des barres système.
+ *
+ * @param statusBarColor La couleur à utiliser pour la barre d'état.
+ * @param navigationBarColor La couleur à utiliser pour la barre de navigation.
+ * @param useLightStatusBarIcons Si `true`, les icônes de la barre d'état seront claires (pour un fond sombre).
+ * @param useLightNavigationBarIcons Si `true`, les icônes de la barre de navigation seront claires (pour un fond sombre).
+ */
 @Composable
 fun SetSystemBarsColor(
     statusBarColor: Color,
@@ -179,24 +189,3 @@ fun SetSystemBarsColor(
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun MainPreview() {
-    BeatVibratorTheme {
-        Box(modifier = Modifier.fillMaxSize()) {
-            DragToSwipeScreen(onActionTriggered = {}) {
-                Scaffold { innerPadding ->
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color(0xFFBBBBBB))
-                            .padding(innerPadding),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {}
-                }
-            }
-            PlayerControls(modifier = Modifier.align(Alignment.BottomCenter))
-        }
-    }
-}
