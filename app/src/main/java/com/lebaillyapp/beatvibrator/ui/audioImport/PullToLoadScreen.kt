@@ -24,6 +24,7 @@ import kotlinx.coroutines.launch
  * @param pullThreshold La distance de glissement nécessaire pour valider l'action.
  * @param dampingFactor Un facteur d'atténuation pour l'effet élastique. Plus la valeur est élevée (vers 1.0f), plus c'est rigide.
  * @param onActionTriggered Le callback à exécuter lorsque le glissement est validé.
+ * @param onOffsetChanged Le callback à exécuter à chaque fois que la position de glissement change.
  * @param content Le contenu de l'écran à rendre glissable.
  * @param stiffness La raideur du ressort. Une valeur plus élevée rend le retour plus rapide.
  * @param dampingRatio Le ratio d'amortissement. Une valeur plus élevée réduit l'effet de rebond.
@@ -34,6 +35,7 @@ fun PullToLoadScreen(
     pullThreshold: Float = 350f, // Seuil de validation en pixels (environ 150dp)
     dampingFactor: Float = 0.05f,
     onActionTriggered: () -> Unit,
+    onOffsetChanged: (Float) -> Unit,
     stiffness: Float = 300f, // Par défaut, une vitesse modérée
     dampingRatio: Float = 2.0f, // Par défaut, un léger rebond
     content: @Composable () -> Unit
@@ -61,6 +63,9 @@ fun PullToLoadScreen(
                                     0f
                                 }
                                 offsetY.snapTo(dampedOffset)
+
+                                // NOUVEAU: On informe le parent de la nouvelle valeur d'offset
+                                onOffsetChanged(offsetY.value)
                             }
                         },
                         onDragEnd = {
@@ -74,7 +79,10 @@ fun PullToLoadScreen(
                                 offsetY.animateTo(
                                     targetValue = 0f,
                                     animationSpec = spring(stiffness = stiffness, dampingRatio = dampingRatio)
-                                )
+                                ) {
+                                    // NOUVEAU: On informe le parent que l'animation est terminée
+                                    onOffsetChanged(offsetY.value)
+                                }
                             }
                         }
                     )
