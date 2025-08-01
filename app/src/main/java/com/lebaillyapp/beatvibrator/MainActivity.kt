@@ -5,8 +5,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,7 +23,6 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,8 +32,8 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
-import com.lebaillyapp.beatvibrator.ui.audioImport.DragToSwipeScreen
-import com.lebaillyapp.beatvibrator.ui.audioImport.PullToLoadScreen
+import com.lebaillyapp.beatvibrator.ui.pullToLoad.DragToSwipeScreen
+import com.lebaillyapp.beatvibrator.ui.pullToLoad.PullToLoadScreen
 import com.lebaillyapp.beatvibrator.ui.player.MicroPlayerComponent
 import com.lebaillyapp.beatvibrator.ui.theme.BeatVibratorTheme
 import dagger.hilt.android.AndroidEntryPoint
