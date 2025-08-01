@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:drawable="@drawable/ic_circle_start">
+
+    <!-- Cible le premier chemin et lui assigne l'animation de morphing -->
+    <target
+        android:name="circle_morph_1"
+        android:animation="@animator/morph_path_1" />
+
+    <!-- Cible le deuxième chemin et lui assigne l'animation de morphing -->
+    <target
+        android:name="circle_morph_2"
+        android:animation="@animator/morph_path_2" />
+
+</animated-vector>
