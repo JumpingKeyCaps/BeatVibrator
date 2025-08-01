@@ -1,8 +1,11 @@
 package com.lebaillyapp.beatvibrator.ui.player
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateDp
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
@@ -10,30 +13,20 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material3.* // Utilisons Material 3
-import androidx.compose.runtime.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.* // Garde cette import pour 'remember' si tu l'utilises pour des états UI locaux et non critiques
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -43,7 +36,6 @@ import com.lebaillyapp.beatvibrator.ui.theme.AlbumFont
 import com.lebaillyapp.beatvibrator.ui.theme.ArtistFont
 import com.lebaillyapp.beatvibrator.ui.theme.MainFont
 
-// IMPORTANT: Ajoute ExperimentalFoundationApi ici pour basicMarquee
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun MicroPlayerComponent(
@@ -51,103 +43,112 @@ fun MicroPlayerComponent(
     songTitle: String = "Unknown Song",
     albumName: String = "Unknown Album",
     artistName: String = "Unknown Artist",
-    initialProgress: Float = 0.0f, // 0.0 to 1.0
-    totalDurationMillis: Long = 150000L,
+    // --- Nouveaux paramètres pour externaliser la logique ---
+    isPlaying: Boolean, // L'état de lecture/pause est passé en paramètre
+    currentProgress: Float, // La progression (0.0f à 1.0f) est passée en paramètre
+    elapsedTimeMillis: Long, // Le temps écoulé est passé en paramètre
+    totalDurationMillis: Long, // La durée totale est passée en paramètre
+    onTogglePlayPause: () -> Unit, // Le callback pour l'action play/pause
+    // --------------------------------------------------------
     elevation: Dp = 8.dp
 ) {
-    var isPlaying by remember { mutableStateOf(false) }
-    var currentProgress by remember { mutableFloatStateOf(initialProgress) }
-    var elapsedTimeMillis by remember { mutableLongStateOf((initialProgress * totalDurationMillis).toLong()) }
+    // Suppression des 'remember { mutableStateOf(...) }' et 'LaunchedEffect'
+    // Ils seront gérés par le composant parent ou un ViewModel plus tard.
 
-    LaunchedEffect(isPlaying) {
-        if (isPlaying) {
-            while (elapsedTimeMillis < totalDurationMillis) {
-                kotlinx.coroutines.delay(1000L) // Update every second
-                elapsedTimeMillis += 1000L
-                currentProgress = elapsedTimeMillis.toFloat() / totalDurationMillis
-                if (currentProgress > 1f) currentProgress = 1f // Cap at 100%
-            }
-            isPlaying = false // Song finished
-            elapsedTimeMillis = 0L // Reset for next play
-            currentProgress = 0f
-        }
+    // Transition pour animer les changements entre play / pause
+    // Reste ici car c'est une animation visuelle basée sur l'état 'isPlaying'
+    val transition = updateTransition(targetState = isPlaying, label = "PlayPauseTransition")
+
+    val timerFontSizeSp by transition.animateFloat(
+        transitionSpec = { tween(durationMillis = 400, easing = LinearEasing) },
+        label = "TimerFontSize"
+    ) { playing ->
+        if (playing) 32f else 22f
+    }
+
+    val timerWidthDp by transition.animateDp(
+        transitionSpec = { tween(durationMillis = 400, easing = LinearEasing) },
+        label = "TimerWidth"
+    ) { playing ->
+        if (playing) 94.dp else 66.dp
+    }
+
+    val infoAlpha by transition.animateFloat(
+        transitionSpec = { tween(durationMillis = 400, easing = LinearEasing) },
+        label = "InfoAlpha"
+    ) { playing ->
+        if (playing) 0.8f else 1f
     }
 
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .height(80.dp), // Hauteur ajustée
-        shape = RoundedCornerShape(52.dp), // Pour la forme "tictac"
+            .height(80.dp),
+        shape = RoundedCornerShape(52.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = elevation)
     ) {
         Box(
             modifier = Modifier
-                .fillMaxSize() // Le Box doit prendre toute la taille de la Card
-                .background( // Applique le dégradé sur ce Box
+                .fillMaxSize()
+                .background(
                     Brush.linearGradient(
                         colors = listOf(
-                            Color(0xFF292525), // Couleur de début du dégradé
-                            Color(0x46342E38)  // Couleur de fin du dégradé
-                        ),
-                        start = Offset(0f, 0f), // Démarre en haut
-                        end = Offset(Float.POSITIVE_INFINITY,0f) // Finit en bas
+                            Color(0xFF292525),
+                            Color(0x2F2E1FFF)
+                        )
                     )
                 )
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 10.dp, vertical = 0.dp),
+                    .padding(horizontal = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Play/Pause Button
+                // Utilise le paramètre isPlaying et le callback onTogglePlayPause
                 PlayPauseButton(
                     isPlaying = isPlaying,
-                    onTogglePlay = { isPlaying = !isPlaying },
+                    onTogglePlay = onTogglePlayPause,
                     modifier = Modifier.size(60.dp)
                 )
 
-                val frontSpacer = if(isPlaying) 15.dp else 10.dp
-                Spacer(Modifier.width(frontSpacer))
+                Spacer(Modifier.width(if (isPlaying) 15.dp else 10.dp))
 
-                // Nouvelle COLONNE pour regrouper le timer, les infos du morceau ET la barre de progression
                 Column(
                     modifier = Modifier
-                        .weight(1f) // Cette colonne prend l'espace restant
-                        .fillMaxHeight(),
-                    verticalArrangement = Arrangement.Center // Centre verticalement le contenu de cette colonne
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .animateContentSize(),
+                    verticalArrangement = Arrangement.Center
                 ) {
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // Conteneur pour le timer et les infos (qui étaient dans une Row ensemble)
                     Row(
                         modifier = Modifier
-                            .fillMaxWidth() // La Row prend toute la largeur disponible dans la Column parente
+                            .fillMaxWidth()
                             .padding(end = 10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Timer
+                        // Utilise elapsedTimeMillis directement
                         val minutes = (elapsedTimeMillis / 1000 / 60).toInt()
                         val seconds = (elapsedTimeMillis / 1000 % 60).toInt()
-                        val timerFontSize = if (isPlaying) 32.sp else 22.sp
-                        val timerFontSpace = if (isPlaying) 94.dp else 66.dp
                         Text(
                             text = String.format("%02d:%02d", minutes, seconds),
                             color = Color.White,
-                            fontSize = timerFontSize,
+                            fontSize = timerFontSizeSp.sp,
                             fontFamily = MainFont,
-                            modifier = Modifier.align(Alignment.CenterVertically).offset(y = (-10).dp)
-                                .width(timerFontSpace)
+                            modifier = Modifier
+                                .width(timerWidthDp)
+                                .offset(y = (-10).dp)
                         )
 
                         Spacer(Modifier.width(0.dp))
 
-                        // Song Info (Title, Album, Artist) - MAINTENANT C'EST UNE COLONNE SÉPARÉE À CÔTÉ DU TIMER
                         Column(
                             modifier = Modifier
-                                .weight(1f) // Prend l'espace restant dans cette Row
-                                .padding(top = 0.dp) // Padding à gauche
-                                .align(Alignment.CenterVertically), // Centre verticalement par rapport au timer
+                                .weight(1f)
+                                .graphicsLayer { alpha = infoAlpha }
+                                .padding(top = 0.dp),
                             verticalArrangement = Arrangement.Center
                         ) {
                             Text(
@@ -162,7 +163,7 @@ fun MicroPlayerComponent(
                             Text(
                                 text = albumName,
                                 color = Color(0xFFC0C0C0),
-                                fontSize = 22.sp,
+                                fontSize = 18.sp,
                                 fontFamily = AlbumFont,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
@@ -180,7 +181,7 @@ fun MicroPlayerComponent(
                         }
                     }
 
-                    // La barre de progression vient DIRECTEMENT SOUS LA ROW du timer/infos
+                    // Utilise currentProgress directement
                     CustomProgressBar(
                         progress = currentProgress,
                         modifier = Modifier
@@ -198,13 +199,7 @@ fun MicroPlayerComponent(
     }
 }
 
-
-/**
- * ## Composant bouton play/pause.
- * @param isPlaying Si le player est en train de jouer.
- * @param onTogglePlay Fonction à appeler lorsque le bouton est cliqué.
- * @param modifier Modifier pour personnaliser l'apparence.
- */
+// PlayPauseButton et CustomProgressBar restent inchangés
 @Composable
 fun PlayPauseButton(
     isPlaying: Boolean,
@@ -215,25 +210,21 @@ fun PlayPauseButton(
         modifier = modifier
             .size(65.dp)
             .clip(CircleShape)
-            .background(Color.White) // Le fond blanc du bouton
+            .background(Color.White)
             .drawBehind {
                 val radius = size.minDimension / 2f
                 val centerX = size.width / 2f
                 val centerY = size.height / 2f
 
-                // Crée le Brush radialGradient AVANT de l'utiliser dans drawCircle
                 val innerShadowBrush = Brush.radialGradient(
-                    // Utilise la signature avec vararg Pair<Float, Color> pour les stops précis
-                    0.0f to Color.Black.copy(alpha = 0.0f),    // Transparent au centre
-                    0.9f to Color.Black.copy(alpha = 0.10f),   // Très légère opacité un peu après le centre
-                    0.98f to Color.Black.copy(alpha = 0.30f),   // Opacité plus marquée près du bord
-                    1.0f to Color.Black.copy(alpha = 0.60f),   // L'opacité la plus forte juste au bord
-                    center = Offset(centerX, centerY), // Spécifie le centre du dégradé
-                    radius = radius // Spécifie le rayon du dégradé
+                    0.0f to Color.Black.copy(alpha = 0.0f),
+                    0.9f to Color.Black.copy(alpha = 0.10f),
+                    0.98f to Color.Black.copy(alpha = 0.30f),
+                    1.0f to Color.Black.copy(alpha = 0.60f),
+                    center = Offset(centerX, centerY),
+                    radius = radius
                 )
 
-                // Dessine un cercle en utilisant ce Brush.
-                // Le cercle sera dessiné exactement aux dimensions et position spécifiées.
                 drawCircle(
                     brush = innerShadowBrush,
                     radius = radius,
@@ -256,23 +247,22 @@ fun PlayPauseButton(
     }
 }
 
-
 @Composable
 fun CustomProgressBar(
     modifier: Modifier = Modifier,
-    progress: Float, // La valeur de progression (0.0f à 1.0f)
-    height: Dp = 4.dp, // Hauteur de la barre de progression
-    trackColor: Color = Color(0xFF4C4C4C), // Couleur du "vide" de la barre (monochrome, gris foncé)
-    progressColor: Color = Color(0xFFC0C0C0), // Couleur de la progression actuelle (gris clair)
-    cornerRadius: Dp = 2.dp // Rayon des coins arrondis
+    progress: Float,
+    height: Dp = 4.dp,
+    trackColor: Color = Color(0xFF4C4C4C),
+    progressColor: Color = Color(0xFFC0C0C0),
+    cornerRadius: Dp = 2.dp
 ) {
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(height)
-            .clip(RoundedCornerShape(cornerRadius)) // Coins arrondis pour toute la barre
-            .background(trackColor) // Couleur de fond de la barre
-            .drawBehind { // Dessine la progression par-dessus
+            .clip(RoundedCornerShape(cornerRadius))
+            .background(trackColor)
+            .drawBehind {
                 val progressWidth = size.width * progress
                 drawRoundRect(
                     color = progressColor,
@@ -281,21 +271,4 @@ fun CustomProgressBar(
                 )
             }
     )
-}
-
-
-// PREVIEW ########################################
-@Preview(showBackground = true)
-@Composable
-fun PreviewMusicPlayerTicTac() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.DarkGray) // Un fond pour bien voir la carte
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        MicroPlayerComponent()
-    }
 }
