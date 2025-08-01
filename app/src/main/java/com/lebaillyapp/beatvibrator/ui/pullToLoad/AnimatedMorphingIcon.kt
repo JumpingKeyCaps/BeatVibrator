@@ -1,5 +1,3 @@
-package com.lebaillyapp.beatvibrator.ui.pullToLoad
-
 import android.graphics.drawable.AnimatedVectorDrawable
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -15,20 +13,30 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import com.lebaillyapp.beatvibrator.R
 
-// Ce composable prend en charge l'animation de votre icône
-// Il prend en paramètre la progression de votre glissement.
+/**
+ * Un composable qui affiche un [AnimatedVectorDrawable] et anime sa progression
+ * en fonction d'une valeur de `progress` fournie.
+ *
+ * Cette fonction est utile pour lier une animation vectorielle à un état d'interface,
+ * comme le glissement d'un doigt ou un défilement.
+ *
+ * @param progress La progression de l'animation, une valeur flottante entre 0.0f (début)
+ * et 1.0f (fin).
+ * @param modifier Le [Modifier] à appliquer à ce composable.
+ * @param animatedIconResId L'ID de ressource de l'[AnimatedVectorDrawable] à afficher.
+ * Par défaut, il utilise R.drawable.animated_morphing_icon.
+ */
 @Composable
 fun AnimatedMorphingIcon(
     progress: Float,
     modifier: Modifier = Modifier,
-    // ID de votre AnimatedVectorDrawable, créé à partir des fichiers XML
     animatedIconResId: Int = R.drawable.animated_morphing_icon
 ) {
     val context = LocalContext.current
     val animatableProgress = remember { Animatable(0f) }
 
-    // On utilise un LaunchedEffect pour animer le progrès du drawable
-    // La valeur de 'progress' de votre glissement est la source de vérité
+    // Utilise un LaunchedEffect pour animer la progression du drawable
+    // La valeur de 'progress' est utilisée comme cible d'animation.
     LaunchedEffect(progress) {
         animatableProgress.animateTo(
             targetValue = progress,
@@ -36,31 +44,37 @@ fun AnimatedMorphingIcon(
         )
     }
 
-    // Créer une instance de l'AnimatedVectorDrawable
+    // Crée une instance de l'AnimatedVectorDrawable en utilisant l'ID de ressource.
     val animatedVectorDrawable = remember {
         context.resources.getDrawable(animatedIconResId, context.theme) as AnimatedVectorDrawable
     }
 
-    // Utiliser drawIntoCanvas pour dessiner l'AnimatedVectorDrawable sur le canvas Compose
+    // Affiche l'icône en utilisant un Painter personnalisé.
     Image(
         painter = remember {
             object : androidx.compose.ui.graphics.painter.Painter() {
+                // Définit la taille intrinsèque du drawable.
                 override val intrinsicSize: androidx.compose.ui.geometry.Size
                     get() = androidx.compose.ui.geometry.Size(
                         animatedVectorDrawable.intrinsicWidth.toFloat(),
                         animatedVectorDrawable.intrinsicHeight.toFloat()
                     )
+
+                // Dessine le drawable sur le canvas Compose.
                 override fun DrawScope.onDraw() {
                     drawIntoCanvas { canvas ->
+                        // Définit les limites du drawable pour qu'il remplisse l'espace.
                         animatedVectorDrawable.setBounds(
                             0,
                             0,
                             intrinsicSize.width.toInt(),
                             intrinsicSize.height.toInt()
                         )
-                        // Définir la progression de l'animation
+                        // Met à jour la progression de l'animation.
+                        // La propriété `level` d'un drawable est un entier entre 0 et 10000.
                         animatedVectorDrawable.jumpToCurrentState()
                         animatedVectorDrawable.level = (animatableProgress.value * 10000).toInt()
+                        // Dessine le drawable sur le canvas natif d'Android.
                         animatedVectorDrawable.draw(canvas.nativeCanvas)
                     }
                 }
@@ -71,11 +85,13 @@ fun AnimatedMorphingIcon(
     )
 }
 
+/**
+ * Une fonction de prévisualisation pour le composable [AnimatedMorphingIcon].
+ *
+ * Elle simule l'état de l'icône à mi-chemin de la transition.
+ */
 @Preview(showBackground = true)
 @Composable
 fun AnimatedMorphingIconPreview() {
-    // Dans la preview, vous pouvez simuler la progression
-    // Par exemple, en faisant varier la valeur de `progress`
     AnimatedMorphingIcon(progress = 0.5f)
 }
-
