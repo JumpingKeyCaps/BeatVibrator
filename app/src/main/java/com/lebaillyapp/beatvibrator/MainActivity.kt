@@ -5,6 +5,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,6 +25,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +40,7 @@ import com.lebaillyapp.beatvibrator.ui.audioImport.PullToLoadScreen
 import com.lebaillyapp.beatvibrator.ui.player.MicroPlayerComponent
 import com.lebaillyapp.beatvibrator.ui.theme.BeatVibratorTheme
 import dagger.hilt.android.AndroidEntryPoint
+import androidx.compose.ui.graphics.lerp // Importez lerp pour l'interpolation
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -53,12 +57,33 @@ class MainActivity : ComponentActivity() {
                     useLightNavigationBarIcons = true
                 )
 
+                // Étape 1 : Définir les couleurs de début et de fin pour le gradient
+                val startColor = Color(0xFFC6FF00)
+                val endColor = Color(0xFF1DE9B6)
+
+                // Étape 2 : Créer un état pour stocker la valeur de l'offset de glissement
+                var pullOffset by remember { mutableFloatStateOf(0f) }
+
+                // Étape 3 : Calculer une progression (de 0.0f à 1.0f) basée sur l'offset
+                val pullThreshold = 650f
+                val progress = (pullOffset / pullThreshold).coerceIn(0f, 1f)
+
+                // Étape 4 : Utiliser lerp pour interpoler la couleur de fond
+                val backgroundColor = lerp(startColor, endColor, progress)
+
                 // Utilise un Box pour empiler les éléments
-                Box(modifier = Modifier.fillMaxSize()
-                    .background(Color(0xFFC6FF00))) {
+                Box(
+                    modifier = Modifier.fillMaxSize()
+                        // Étape 5 : Appliquer la couleur de fond dynamique
+                        .background(backgroundColor)
+                ) {
                     // On enveloppe le contenu principal de l'écran dans notre nouveau conteneur de glissement.
                     // C'est cette partie qui va bouger.
                     PullToLoadScreen(
+                        // On passe le callback pour mettre à jour l'état de l'offset
+                        onOffsetChanged = { offset ->
+                            pullOffset = offset
+                        },
                         onActionTriggered = {
                             // Ici,  appeler la fonction SAF plus tard
                             // Pour le moment, l'action est gérée par le Toast dans le composant
@@ -66,7 +91,7 @@ class MainActivity : ComponentActivity() {
                     ) {
                         Card(
                             modifier = Modifier.fillMaxSize(),
-                            shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 20.dp, bottomEnd = 20.dp),
+                            shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp, bottomStart = 20.dp, bottomEnd = 20.dp),
                             colors = CardDefaults.cardColors(containerColor = Color(0xFFBABABA)),
                             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                         ) {
