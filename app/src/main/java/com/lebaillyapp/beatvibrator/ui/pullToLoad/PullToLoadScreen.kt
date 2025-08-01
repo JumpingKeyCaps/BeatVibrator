@@ -1,4 +1,4 @@
-package com.lebaillyapp.beatvibrator.ui.audioImport
+package com.lebaillyapp.beatvibrator.ui.pullToLoad
 
 import android.widget.Toast
 import androidx.compose.animation.core.Animatable
@@ -13,7 +13,6 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
 /**

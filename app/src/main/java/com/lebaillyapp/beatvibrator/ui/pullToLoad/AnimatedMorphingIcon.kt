@@ -1,4 +1,4 @@
-package com.lebaillyapp.beatvibrator.ui.pulltoload
+package com.lebaillyapp.beatvibrator.ui.pullToLoad
 
 import android.graphics.drawable.AnimatedVectorDrawable
 import androidx.compose.animation.core.Animatable
@@ -8,14 +8,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.core.graphics.drawable.toBitmap
 import com.lebaillyapp.beatvibrator.R
 
 // Ce composable prend en charge l'animation de votre icône
