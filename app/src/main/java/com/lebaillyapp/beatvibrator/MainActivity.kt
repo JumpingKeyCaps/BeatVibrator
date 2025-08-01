@@ -7,9 +7,13 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -28,6 +32,8 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
+import com.lebaillyapp.beatvibrator.ui.audioImport.DragToSwipeScreen
+import com.lebaillyapp.beatvibrator.ui.audioImport.PullToLoadScreen
 import com.lebaillyapp.beatvibrator.ui.player.MicroPlayerComponent
 import com.lebaillyapp.beatvibrator.ui.theme.BeatVibratorTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -47,11 +53,43 @@ class MainActivity : ComponentActivity() {
                     useLightNavigationBarIcons = true
                 )
 
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    // Appelle le composant parent qui gère l'état
-                    PlayerScreen(
-                        modifier = Modifier.padding(innerPadding)
-                    )
+                // Utilise un Box pour empiler les éléments
+                Box(modifier = Modifier.fillMaxSize()
+                    .background(Color(0xFFC6FF00))) {
+                    // On enveloppe le contenu principal de l'écran dans notre nouveau conteneur de glissement.
+                    // C'est cette partie qui va bouger.
+                    PullToLoadScreen(
+                        onActionTriggered = {
+                            // Ici,  appeler la fonction SAF plus tard
+                            // Pour le moment, l'action est gérée par le Toast dans le composant
+                        }
+                    ) {
+                        Card(
+                            modifier = Modifier.fillMaxSize(),
+                            shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 20.dp, bottomEnd = 20.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFBABABA)),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        ) {
+                            Scaffold(
+                                modifier = Modifier.fillMaxSize(),
+                                containerColor = Color.Transparent
+                            ) { innerPadding ->
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(innerPadding),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+
+                                }
+                            }
+                        }
+                    }
+
+                    // Le MicroPlayerComponent est positionné en bas,
+                    // en dehors de DragToSwipeScreen, donc il reste fixe.
+                    PlayerControls(modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 20.dp))
                 }
             }
         }
@@ -59,60 +97,44 @@ class MainActivity : ComponentActivity() {
 }
 
 /**
- * Composant parent temporaire qui contient la logique d'état et de temps.
- * Il alimente le MicroPlayerComponent avec ses données.
+ * Ce composable gère l'état du lecteur et affiche le MicroPlayerComponent.
+ * Il est maintenant séparé de la logique de glissement.
  */
 @Composable
-fun PlayerScreen(modifier: Modifier = Modifier) {
-    // --- États et logique temporaire pour le test à l'arrache ---
+fun PlayerControls(modifier: Modifier = Modifier) {
     var isPlaying by remember { mutableStateOf(false) }
     var currentProgress by remember { mutableFloatStateOf(0.0f) }
     var elapsedTimeMillis by remember { mutableLongStateOf(0L) }
-    val totalDurationMillis = 150000L // 2 minutes 30 secondes
+    val totalDurationMillis = 150000L
 
-    // Logique du timer, relancée à chaque changement de 'isPlaying'
     LaunchedEffect(isPlaying) {
         if (isPlaying) {
             while (elapsedTimeMillis < totalDurationMillis) {
-                // Attendre 1 seconde avant de mettre à jour
                 kotlinx.coroutines.delay(1000L)
                 elapsedTimeMillis += 1000L
                 currentProgress = (elapsedTimeMillis.toFloat() / totalDurationMillis).coerceAtMost(1f)
             }
-            // Arrêter et réinitialiser la lecture une fois le morceau terminé
             isPlaying = false
             elapsedTimeMillis = 0L
             currentProgress = 0f
         }
     }
-    // -------------------------------------------------------------
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(Color(0xFFBBBBBB)),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Bottom
-    ) {
-        // Le MicroPlayerComponent reçoit maintenant tous ses états et son callback
-        MicroPlayerComponent(
-            modifier = Modifier.padding(36.dp),
-            songTitle = "Beautiful Things",
-            albumName = "FireWork and Rollerblades",
-            artistName = "Benson Boone",
-            isPlaying = isPlaying, // Passe l'état actuel
-            currentProgress = currentProgress, // Passe la progression actuelle
-            elapsedTimeMillis = elapsedTimeMillis, // Passe le temps écoulé
-            totalDurationMillis = totalDurationMillis, // Passe la durée totale
-            onTogglePlayPause = { isPlaying = !isPlaying }, // Passe l'action de mise à jour
-            elevation = 8.dp
-        )
-    }
+    MicroPlayerComponent(
+        modifier = modifier.padding(26.dp),
+        songTitle = "Beautiful Things",
+        albumName = "FireWork and Rollerblades",
+        artistName = "Benson Boone",
+        isPlaying = isPlaying,
+        currentProgress = currentProgress,
+        elapsedTimeMillis = elapsedTimeMillis,
+        totalDurationMillis = totalDurationMillis,
+        onTogglePlayPause = { isPlaying = !isPlaying },
+        elevation = 8.dp
+    )
 }
 
-/**
- * Définit la couleur de la barre de statut et de navigation du système.
- */
+
 @Composable
 fun SetSystemBarsColor(
     statusBarColor: Color,
@@ -139,7 +161,20 @@ fun SetSystemBarsColor(
 @Composable
 fun MainPreview() {
     BeatVibratorTheme {
-        // Affiche le PlayerScreen pour la prévisualisation
-        PlayerScreen()
+        Box(modifier = Modifier.fillMaxSize()) {
+            DragToSwipeScreen(onActionTriggered = {}) {
+                Scaffold { innerPadding ->
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color(0xFFBBBBBB))
+                            .padding(innerPadding),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {}
+                }
+            }
+            PlayerControls(modifier = Modifier.align(Alignment.BottomCenter))
+        }
     }
 }
