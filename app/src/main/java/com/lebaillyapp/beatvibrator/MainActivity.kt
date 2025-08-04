@@ -1,10 +1,17 @@
 package com.lebaillyapp.beatvibrator
 
 import android.app.Activity
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,7 +38,9 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
+import androidx.core.content.PermissionChecker
 import com.lebaillyapp.beatvibrator.ui.player.MicroPlayerComponent
 import com.lebaillyapp.beatvibrator.ui.pullToLoad.PullToLoadScreen
 import com.lebaillyapp.beatvibrator.ui.theme.BeatVibratorTheme
@@ -46,8 +55,51 @@ import dagger.hilt.android.AndroidEntryPoint
  */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    private lateinit var pickAudioLauncher: ActivityResultLauncher<Array<String>>
+    private lateinit var permissionLauncher: ActivityResultLauncher<String>
+    private var pendingOpenPicker = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Initialise le launcher SAF pour choisir un fichier audio
+        pickAudioLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+            uri?.let {
+                try {
+                    contentResolver.takePersistableUriPermission(
+                        it,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
+                } catch (e: SecurityException) {
+                    Log.w("MainActivity", "Impossible de prendre permission persistante", e)
+                }
+                Log.d("MainActivity", "Musique sélectionnée : $it")
+                Toast.makeText(this, "Musique choisie : $it", Toast.LENGTH_SHORT).show()
+                // TODO: utiliser cet URI pour la lecture
+            } ?: run {
+                Toast.makeText(this, "Sélection annulée", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        // Launcher pour demander la permission runtime adaptée
+        permissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { granted ->
+            if (granted) {
+                if (pendingOpenPicker) {
+                    pendingOpenPicker = false
+                    launchAudioPicker()
+                }
+            } else {
+                Toast.makeText(
+                    this,
+                    "Permission refusée. Impossible de sélectionner une musique.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+
         enableEdgeToEdge()
         setContent {
             BeatVibratorTheme {
@@ -59,36 +111,37 @@ class MainActivity : ComponentActivity() {
                     useLightNavigationBarIcons = true
                 )
 
-                // Les couleurs de début et de fin pour l'interpolation du dégradé de fond.
                 val startColor = Color(0xFFC6FF00)
                 val endColor = Color(0xFF1DE9B6)
-
-                // L'état qui stocke le décalage (offset) de l'action de glissement.
                 var pullOffset by remember { mutableFloatStateOf(0f) }
-
-                // Définit le seuil de glissement pour calculer la progression.
                 val pullThreshold = 650f
-                // Calcule la progression (0.0f à 1.0f) en fonction de l'offset de glissement.
                 val progress = (pullOffset / pullThreshold).coerceIn(0f, 1f)
-
-                // Interpole la couleur de fond en fonction de la progression.
                 val backgroundColor = lerp(startColor, endColor, progress)
 
-                // Utilise un Box pour empiler les éléments de l'écran.
                 Box(
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier
+                        .fillMaxSize()
                         .background(backgroundColor)
                 ) {
-                    // Le contenu principal de l'écran, enveloppé dans un composant de glissement.
                     PullToLoadScreen(
-                        // Callback pour mettre à jour l'état de l'offset en fonction du glissement.
                         onOffsetChanged = { offset -> pullOffset = offset },
-                        // Callback pour déclencher une action lorsque le glissement est terminé.
-                        onActionTriggered = { /* L'action de chargement sera implémentée ici */ }
+                        onActionTriggered = {
+                            if (hasAudioPermission()) {
+                                launchAudioPicker()
+                            } else {
+                                pendingOpenPicker = true
+                                requestAudioPermission()
+                            }
+                        }
                     ) {
                         Card(
                             modifier = Modifier.fillMaxSize(),
-                            shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp, bottomStart = 20.dp, bottomEnd = 20.dp),
+                            shape = RoundedCornerShape(
+                                topStart = 30.dp,
+                                topEnd = 30.dp,
+                                bottomStart = 20.dp,
+                                bottomEnd = 20.dp
+                            ),
                             colors = CardDefaults.cardColors(containerColor = Color(0xFFBABABA)),
                             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                         ) {
@@ -103,17 +156,46 @@ class MainActivity : ComponentActivity() {
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.Center
                                 ) {
-                                    // Le contenu de la colonne est vide dans cet exemple
+                                    // contenu vide pour l'instant
                                 }
                             }
                         }
                     }
 
-                    // Le lecteur de musique est positionné en bas et reste fixe pendant le glissement.
-                    PlayerControls(modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 20.dp))
+                    PlayerControls(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 20.dp)
+                    )
                 }
             }
         }
+    }
+
+    private fun hasAudioPermission(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(
+                this,
+                android.Manifest.permission.READ_MEDIA_AUDIO
+            ) == PermissionChecker.PERMISSION_GRANTED
+        } else {
+            ContextCompat.checkSelfPermission(
+                this,
+                android.Manifest.permission.READ_EXTERNAL_STORAGE
+            ) == PermissionChecker.PERMISSION_GRANTED
+        }
+    }
+
+    private fun requestAudioPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissionLauncher.launch(android.Manifest.permission.READ_MEDIA_AUDIO)
+        } else {
+            permissionLauncher.launch(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
+    }
+
+    private fun launchAudioPicker() {
+        pickAudioLauncher.launch(arrayOf("audio/*"))
     }
 }
 
@@ -130,7 +212,6 @@ fun PlayerControls(modifier: Modifier = Modifier) {
     var elapsedTimeMillis by remember { mutableLongStateOf(0L) }
     val totalDurationMillis = 150000L
 
-    // Simule la progression de la lecture de la musique
     LaunchedEffect(isPlaying) {
         if (isPlaying) {
             while (elapsedTimeMillis < totalDurationMillis) {
@@ -138,7 +219,6 @@ fun PlayerControls(modifier: Modifier = Modifier) {
                 elapsedTimeMillis += 1000L
                 currentProgress = (elapsedTimeMillis.toFloat() / totalDurationMillis).coerceAtMost(1f)
             }
-            // Réinitialise l'état une fois la chanson terminée
             isPlaying = false
             elapsedTimeMillis = 0L
             currentProgress = 0f
@@ -161,11 +241,6 @@ fun PlayerControls(modifier: Modifier = Modifier) {
 
 /**
  * Un composable qui définit la couleur et le style des barres système.
- *
- * @param statusBarColor La couleur à utiliser pour la barre d'état.
- * @param navigationBarColor La couleur à utiliser pour la barre de navigation.
- * @param useLightStatusBarIcons Si `true`, les icônes de la barre d'état seront claires (pour un fond sombre).
- * @param useLightNavigationBarIcons Si `true`, les icônes de la barre de navigation seront claires (pour un fond sombre).
  */
 @Composable
 fun SetSystemBarsColor(
@@ -188,4 +263,3 @@ fun SetSystemBarsColor(
         }
     }
 }
-
