@@ -2,6 +2,7 @@ package com.lebaillyapp.beatvibrator
 
 import android.app.Activity
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -12,12 +13,16 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -34,8 +39,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -44,6 +52,7 @@ import androidx.core.content.PermissionChecker
 import com.lebaillyapp.beatvibrator.ui.player.MicroPlayerComponent
 import com.lebaillyapp.beatvibrator.ui.pullToLoad.PullToLoadScreen
 import com.lebaillyapp.beatvibrator.ui.theme.BeatVibratorTheme
+import com.lebaillyapp.beatvibrator.ui.visualizer.PulseVisualizer
 import dagger.hilt.android.AndroidEntryPoint
 
 /**
@@ -60,6 +69,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var permissionLauncher: ActivityResultLauncher<String>
     private var pendingOpenPicker = false
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -117,7 +127,7 @@ class MainActivity : ComponentActivity() {
                 val pullThreshold = 650f
                 val progress = (pullOffset / pullThreshold).coerceIn(0f, 1f)
                 val backgroundColor = lerp(startColor, endColor, progress)
-
+/**
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -157,6 +167,10 @@ class MainActivity : ComponentActivity() {
                                     verticalArrangement = Arrangement.Center
                                 ) {
                                     // contenu vide pour l'instant
+
+
+
+
                                 }
                             }
                         }
@@ -168,9 +182,49 @@ class MainActivity : ComponentActivity() {
                             .padding(bottom = 20.dp)
                     )
                 }
+
+                */
+
+
+                PulseVisualizerScreen()
+
+
             }
         }
     }
+
+
+
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    @Composable
+    fun PulseVisualizerScreen() {
+        val context = LocalContext.current
+
+        // 1. Chargez une ImageBitmap à utiliser comme fond
+        // Placez une image dans res/drawable (par exemple, 'background_image.jpg')
+        val backgroundImageBitmap: ImageBitmap = remember {
+            BitmapFactory.decodeResource(context.resources, R.drawable.cover_example).asImageBitmap()
+        }
+
+        // 2. Passez l'ImageBitmap et l'ID du shader à votre composable PulseVisualizer
+        Box(modifier = Modifier
+            .width(300.dp)
+            .height(300.dp)) {
+            PulseVisualizer(
+                modifier = Modifier.fillMaxSize(),
+                bitmap = backgroundImageBitmap,
+                shaderResId = R.raw.pulse_visualizer // C'est ici que vous référencez votre fichier AGSL
+            )
+        }
+    }
+
+
+
+
+
+
+
 
     private fun hasAudioPermission(): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
