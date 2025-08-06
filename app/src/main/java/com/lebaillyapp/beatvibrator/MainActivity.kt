@@ -53,6 +53,7 @@ import com.lebaillyapp.beatvibrator.ui.player.MicroPlayerComponent
 import com.lebaillyapp.beatvibrator.ui.pullToLoad.PullToLoadScreen
 import com.lebaillyapp.beatvibrator.ui.theme.BeatVibratorTheme
 import com.lebaillyapp.beatvibrator.ui.visualizer.PulseVisualizer
+import com.lebaillyapp.beatvibrator.ui.visualizer.customShape.BulgedRoundedRectangleShape
 import dagger.hilt.android.AndroidEntryPoint
 
 /**
@@ -189,19 +190,39 @@ class MainActivity : ComponentActivity() {
         val context = LocalContext.current
 
         // 1. Chargez une ImageBitmap à utiliser comme fond
+        // Placez une image dans res/drawable (par exemple, 'background_image.jpg')
         val backgroundImageBitmap: ImageBitmap = remember {
-            BitmapFactory.decodeResource(context.resources, R.drawable.cover_example).asImageBitmap()
+            BitmapFactory.decodeResource(context.resources, R.drawable.cover_example_2).asImageBitmap()
         }
 
-        // 2. Passez l'ImageBitmap et l'ID du shader  PulseVisualizer
-        Box(modifier = Modifier
-            .width(300.dp)
-            .height(300.dp)) {
-            PulseVisualizer(
-                modifier = Modifier.fillMaxSize(),
-                bitmap = backgroundImageBitmap,
-                shaderResId = R.raw.pulse_visualizer //  fichier AGSL
+        // 2. Passez l'ImageBitmap et l'ID du shader à votre composable PulseVisualizer
+        // Nous enveloppons maintenant le PulseVisualizer dans une Card
+
+        // Définissez la forme custom
+        val customBulgedShape = remember {
+            BulgedRoundedRectangleShape(
+                cornerRadius = 25.dp,
+                bulgeAmount = 0.03f
             )
+        }
+
+
+        Card(
+            modifier = Modifier
+                .width(300.dp)
+                .height(300.dp),
+            shape = customBulgedShape,
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFBABABA)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp) // Élévation pour la Card du visualiseur
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) { // Le Box existant pour le fillMaxSize du PulseVisualizer
+                PulseVisualizer(
+                    modifier = Modifier.fillMaxSize(),
+                    bitmap = backgroundImageBitmap,
+                    shaderResId = R.raw.pulse_visualizer, //   fichier AGSL
+                    shape = customBulgedShape
+                )
+            }
         }
     }
 
