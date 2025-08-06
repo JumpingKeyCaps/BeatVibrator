@@ -24,7 +24,10 @@ import android.graphics.RenderEffect
 import android.graphics.RuntimeShader
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.toSize
 
@@ -46,7 +49,8 @@ fun PulseVisualizer(
     modifier: Modifier = Modifier,
     bitmap: ImageBitmap,
     pulseVisualizerViewModel: PulseVisualizerViewModel = viewModel(),
-    @RawRes shaderResId: Int
+    @RawRes shaderResId: Int,
+    shape: Shape = RectangleShape
 ) {
     val context = LocalContext.current
 
@@ -123,7 +127,9 @@ fun PulseVisualizer(
                 composableSize = newSize.toSize() // Utiliser .toSize() pour correspondre à Size.Zero
             }
             // TRES IMPORTANT !!!!!  clip = true  pour eviter bug sur couche de rendu si composable dans un scaffold ou card parent !
-            .graphicsLayer(renderEffect = renderEffect, clip = true)
+            // Et passer la shape custom ici, et non via un .clip()
+            .graphicsLayer(renderEffect = renderEffect, clip = true, shape = shape)
+
     )
 }
 
