@@ -34,7 +34,7 @@ class PulseVisualizerViewModel : ViewModel() {
     private val initialAmplitude = 60f // L'amplitude du drag était souvent plus élevée, ajuster pour la musique.
 
     /** Initial frequency for newly created pulses. Controls how "dense" the ripples are. */
-    private val initialFrequency = 5f // Plus la fréquence est élevée, plus il y a de cercles par onde.
+    private val initialFrequency = 2f // Plus la fréquence est élevée, plus il y a de cercles par onde.
 
     /** Initial speed for newly created pulses (pixels per second). */
     private val initialSpeed = 500f // Vitesse de propagation de l'onde.
@@ -50,7 +50,7 @@ class PulseVisualizerViewModel : ViewModel() {
 
     // --- Paramètres pour la simulation de pulsation (sera retiré plus tard) ---
     private var simulationJob: kotlinx.coroutines.Job? = null
-    private var simulationPulseIntervalSeconds = 5f // Émettre un pulse toutes les 0.5 secondes (2 pulses/sec)
+    private var simulationPulseIntervalSeconds = 10f // Émettre un pulse toutes les 0.5 secondes (2 pulses/sec)
     private var simulationPulseOrigin: Offset? = null // L'origine des pulses, typiquement le centre de l'image.
 
     /**
