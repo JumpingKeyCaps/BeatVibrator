@@ -209,11 +209,11 @@ class MainActivity : ComponentActivity() {
 
         Card(
             modifier = Modifier
-                .width(300.dp)
-                .height(300.dp),
+                .width(310.dp)
+                .height(310.dp),
             shape = customBulgedShape,
             colors = CardDefaults.cardColors(containerColor = Color(0xFFBABABA)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp) // Élévation pour la Card du visualiseur
+            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp) // Élévation pour la Card du visualiseur
         ) {
             Box(modifier = Modifier.fillMaxSize()) { // Le Box existant pour le fillMaxSize du PulseVisualizer
                 PulseVisualizer(

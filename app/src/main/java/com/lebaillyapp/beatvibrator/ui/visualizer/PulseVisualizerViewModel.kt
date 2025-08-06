@@ -22,7 +22,7 @@ class PulseVisualizerViewModel : ViewModel() {
 
     // --- Configuration des paramètres des ondes (ajustables pour l'effet visuel) ---
     /** Global damping factor controlling amplitude decay speed for all pulses. */
-    private val globalDamping = 0.65f // Un facteur plus élevé (proche de 1.0f) signifie un amortissement plus lent.
+    private val globalDamping = 0.15f // Un facteur plus élevé (proche de 1.0f) signifie un amortissement plus lent.
 
     /** Minimum amplitude below which pulses are removed from the active list (CPU optimization). */
     private val minAmplitudeToRemovePulse = 0.2f // L légèrement augmenté pour nettoyer plus tôt si nécessaire
@@ -31,10 +31,10 @@ class PulseVisualizerViewModel : ViewModel() {
     private val minAmplitudeThresholdForShader = 2f
 
     /** Initial amplitude for newly created pulses. Adjust based on desired visual impact. */
-    private val initialAmplitude = 60f // L'amplitude du drag était souvent plus élevée, ajuster pour la musique.
+    private val initialAmplitude = 150f // L'amplitude du drag était souvent plus élevée, ajuster pour la musique.
 
     /** Initial frequency for newly created pulses. Controls how "dense" the ripples are. */
-    private val initialFrequency = 2f // Plus la fréquence est élevée, plus il y a de cercles par onde.
+    private val initialFrequency = 5f // Plus la fréquence est élevée, plus il y a de cercles par onde.
 
     /** Initial speed for newly created pulses (pixels per second). */
     private val initialSpeed = 500f // Vitesse de propagation de l'onde.
@@ -50,7 +50,7 @@ class PulseVisualizerViewModel : ViewModel() {
 
     // --- Paramètres pour la simulation de pulsation (sera retiré plus tard) ---
     private var simulationJob: kotlinx.coroutines.Job? = null
-    private var simulationPulseIntervalSeconds = 10f // Émettre un pulse toutes les 0.5 secondes (2 pulses/sec)
+    private var simulationPulseIntervalSeconds = 1f // Émettre un pulse toutes les 0.5 secondes (2 pulses/sec)
     private var simulationPulseOrigin: Offset? = null // L'origine des pulses, typiquement le centre de l'image.
 
     /**

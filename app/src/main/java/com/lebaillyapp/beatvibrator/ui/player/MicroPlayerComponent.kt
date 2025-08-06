@@ -96,6 +96,7 @@ fun MicroPlayerComponent(
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .padding(horizontal = 10.dp)
             .height(80.dp),
         shape = RoundedCornerShape(52.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = elevation)
