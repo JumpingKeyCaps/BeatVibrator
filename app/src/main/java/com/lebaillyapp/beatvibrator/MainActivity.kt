@@ -86,13 +86,12 @@ class MainActivity : ComponentActivity() {
                 }
                 Log.d("MainActivity", "Musique sélectionnée : $it")
                 Toast.makeText(this, "Musique choisie : $it", Toast.LENGTH_SHORT).show()
-                // TODO: utiliser cet URI pour la lecture
             } ?: run {
                 Toast.makeText(this, "Sélection annulée", Toast.LENGTH_SHORT).show()
             }
         }
 
-        // Launcher pour demander la permission runtime adaptée
+        // Launcher pour demander la permission runtime adaptée SAF
         permissionLauncher = registerForActivityResult(
             ActivityResultContracts.RequestPermission()
         ) { granted ->
@@ -127,7 +126,7 @@ class MainActivity : ComponentActivity() {
                 val pullThreshold = 650f
                 val progress = (pullOffset / pullThreshold).coerceIn(0f, 1f)
                 val backgroundColor = lerp(startColor, endColor, progress)
-/**
+
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -166,29 +165,17 @@ class MainActivity : ComponentActivity() {
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.Center
                                 ) {
-                                    // contenu vide pour l'instant
-
-
-
-
+                                    PulseVisualizerScreen()
                                 }
                             }
                         }
                     }
-
                     PlayerControls(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .padding(bottom = 20.dp)
                     )
                 }
-
-                */
-
-
-                PulseVisualizerScreen()
-
-
             }
         }
     }
@@ -202,19 +189,18 @@ class MainActivity : ComponentActivity() {
         val context = LocalContext.current
 
         // 1. Chargez une ImageBitmap à utiliser comme fond
-        // Placez une image dans res/drawable (par exemple, 'background_image.jpg')
         val backgroundImageBitmap: ImageBitmap = remember {
             BitmapFactory.decodeResource(context.resources, R.drawable.cover_example).asImageBitmap()
         }
 
-        // 2. Passez l'ImageBitmap et l'ID du shader à votre composable PulseVisualizer
+        // 2. Passez l'ImageBitmap et l'ID du shader  PulseVisualizer
         Box(modifier = Modifier
             .width(300.dp)
             .height(300.dp)) {
             PulseVisualizer(
                 modifier = Modifier.fillMaxSize(),
                 bitmap = backgroundImageBitmap,
-                shaderResId = R.raw.pulse_visualizer // C'est ici que vous référencez votre fichier AGSL
+                shaderResId = R.raw.pulse_visualizer //  fichier AGSL
             )
         }
     }
