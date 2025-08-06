@@ -26,9 +26,7 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.toSize // <-- Ajouté pour correspondre à votre exemple
-import kotlinx.coroutines.delay // <-- Ajouté pour correspondre à votre exemple (si vous voulez une limite 60fps)
-// import android.util.Log // Gardez ceci si vous voulez des logs de débogage
+import androidx.compose.ui.unit.toSize
 
 /**
  * A Jetpack Compose Composable that applies a dynamic AGSL shader effect
@@ -62,7 +60,6 @@ fun PulseVisualizer(
     var currentTimeSeconds by remember { mutableFloatStateOf(0f) }
 
     // State to hold the size of the composable.
-    // Utilisé androidx.compose.ui.geometry.Size comme dans votre exemple.
     var composableSize by remember { mutableStateOf(androidx.compose.ui.geometry.Size.Zero) }
 
     // LaunchedEffect to drive the animation time and cleanup waves.
@@ -73,7 +70,7 @@ fun PulseVisualizer(
                 currentTimeSeconds = (frameTime - startTime) / 1_000_000_000f
             }
             pulseVisualizerViewModel.cleanupWaves(currentTimeSeconds)
-            // Ajouter un delay de 16ms (environ 60 FPS) comme dans votre exemple
+            // Ajouter un delay de 16ms (environ 60 FPS)
             kotlinx.coroutines.delay(16)
         }
     }
@@ -92,7 +89,6 @@ fun PulseVisualizer(
     // Get current shader uniforms from ViewModel.
     val waves by pulseVisualizerViewModel.waves.collectAsState()
 
-    // C'EST LA DIFFÉRENCE CLÉ - Pas de 'remember' pour currentShaderParams, et pas de 'remember' pour renderEffect !
     // currentShaderParams sera recalculé à chaque recomposition
     val currentShaderParams = pulseVisualizerViewModel.getShaderUniforms(currentTimeSeconds)
 
@@ -113,22 +109,21 @@ fun PulseVisualizer(
         }
     }
 
-    // C'EST LA DIFFÉRENCE CLÉ - PAS DE 'remember' ICI !
-    // Cela force la recréation du RenderEffect à chaque recomposition,
+    // force la recréation du RenderEffect à chaque recomposition,
     // ce qui force le redessin et la prise en compte des uniforms mis à jour.
     val renderEffect = RenderEffect.createRuntimeShaderEffect(shader, "inputShader").asComposeRenderEffect()
 
     Image(
         painter = androidx.compose.ui.graphics.painter.BitmapPainter(bitmap),
-        contentDescription = null, // Or provide a meaningful description
+        contentDescription = null,
         contentScale = ContentScale.Crop,
         modifier = modifier
             .fillMaxSize()
             .onSizeChanged { newSize ->
                 composableSize = newSize.toSize() // Utiliser .toSize() pour correspondre à Size.Zero
             }
-            // Retirer le .then(touchModifier) puisque nous n'avons pas de touch.
-            .graphicsLayer(renderEffect = renderEffect)
+            // TRES IMPORTANT !!!!!  clip = true  pour eviter bug sur couche de rendu si composable dans un scaffold ou card parent !
+            .graphicsLayer(renderEffect = renderEffect, clip = true)
     )
 }
 
